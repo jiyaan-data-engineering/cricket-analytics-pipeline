@@ -1,0 +1,39 @@
+# GitHub Pages Jekyll Configuration
+# Serves the Cricket Analytics Pipeline documentation website
+
+title: Cricket Analytics Pipeline
+description: Production-grade GCP data engineering pipeline for ICC batting rankings
+author: Satish Mudde
+year: 2026
+
+# GitHub Pages
+github_url: https://github.com/jiyaan-data-engineering/cricket-analytics-pipeline
+
+# Jekyll Theme
+theme: jekyll-theme-slate
+
+# Markdown processor
+markdown: kramdown
+
+# Navigation
+show_downloads: false
+
+# Layout
+plugins:
+  - jekyll-seo-tag
+  - jekyll-sitemap
+
+# Exclude files
+exclude:
+  - .gitignore
+  - node_modules
+  - /docs/node_modules
+  - .sass-cache
+
+# Defaults
+defaults:
+  - scope:
+      path: ""
+      type: "pages"
+    values:
+      layout: "default"

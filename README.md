@@ -19,12 +19,13 @@ End-to-end GCP data engineering pipeline that ingests ICC Men's Batting Rankings
 ---
 
 **Key Features**:
-- ✅ Zero hardcoding - Everything configurable
-- ✅ Complete Infrastructure as Code (Terraform)
-- ✅ 12 BigQuery objects (6 tables + 6 views)
-- ✅ 12 Schema files (100% aligned with SQL)
-- ✅ Professional documentation (16 guides)
-- ✅ Production-grade architecture
+- ✅ **Documentation-First**: 21 comprehensive guides in `Documentation/` folder
+- ✅ **Zero Hardcoding**: All values configurable via config.yaml
+- ✅ **Complete IaC**: Terraform for all GCP resources
+- ✅ **12 BigQuery Objects**: 6 tables + 6 views (68 columns documented)
+- ✅ **Perfect Schema Alignment**: 12 SQL files + 12 JSON schema files (100% matched)
+- ✅ **Production-Grade**: GitHub Pages ready, full CI/CD pipeline
+- ✅ **Organized Structure**: Documentation | Infrastructure | Pipeline
 
 ---
 
@@ -186,117 +187,158 @@ SCHEDULING
 
 ---
 
-## 📁 Project Structure
+## 📁 Project Structure (Documentation-First)
 
 ```
 cricket-analytics-pipeline/ (Author: Satish Mudde)
-├── config/
-│   └── config.yaml                              # Central configuration (SOURCE OF TRUTH)
-│
-├── bigquery/
-│   ├── schemas/ (12 JSON files - 1:1 with SQL)
-│   │   ├── raw_batting_rankings.json            # Raw table schema
-│   │   ├── vw_latest_raw.json                   # Raw view columns
-│   │   ├── dim_player.json                      # Player dimension
-│   │   ├── dim_country.json                     # Country dimension
-│   │   ├── dim_format.json                      # Format dimension
-│   │   ├── dim_date.json                        # Date dimension
-│   │   ├── fact_batting_rankings.json           # Fact table
-│   │   ├── vw_batting_rankings_latest.json      # Curated view
-│   │   ├── vw_batting_rankings_90day_trend.json # Trend view
-│   │   ├── vw_top_10_batsmen_by_format.json     # Top 10 view
-│   │   ├── vw_batting_statistics_by_country.json# Country stats
-│   │   └── vw_ranking_comparison_cross_format.json # Cross-format view
-│   │
-│   └── sql/ (12 SQL files - meaningful names)
-│       ├── raw_batting_rankings.sql             # Raw table (11 columns)
-│       ├── vw_latest_raw.sql                    # Raw debug view
-│       ├── dim_player.sql                       # Dimension with MERGE
-│       ├── dim_country.sql                      # Dimension with ICC codes
-│       ├── dim_format.sql                       # Static lookup table
-│       ├── dim_date.sql                         # 7305-row date spine
-│       ├── fact_batting_rankings.sql            # Daily snapshot (MERGE)
-│       ├── vw_batting_rankings_latest.sql       # Latest rankings
-│       ├── vw_batting_rankings_90day_trend.sql  # Historical trend
-│       ├── vw_top_10_batsmen_by_format.sql      # Top 10 analysis
-│       ├── vw_batting_statistics_by_country.sql # Country aggregates
-│       └── vw_ranking_comparison_cross_format.sql # Format comparison
-│
-├── ingestion/
-│   ├── fetch_batting_rankings.py                # API ingestion script
-│   └── requirements.txt
-│
-├── cloud_function/
-│   ├── main.py                                  # GCS trigger → Dataflow
-│   └── requirements.txt
-│
-├── dataflow/
-│   ├── pipeline.py                              # Apache Beam pipeline
-│   ├── Dockerfile                               # Flex Template container
-│   └── requirements.txt
-│
-├── terraform/
-│   ├── main.tf                                  # APIs, service accounts, scheduler
-│   ├── bigquery.tf                              # 12 BigQuery resources
-│   ├── gcs.tf                                   # 3 GCS buckets
-│   ├── cloud_composer.tf                        # Airflow orchestration
-│   ├── variables.tf                             # 30+ configurable variables
-│   ├── outputs.tf                               # Resource outputs
-│   └── terraform.tfvars.example                 # Copy & customize
-│
-└── docs/ (16 Comprehensive Guides)
-    ├── README.md                                # This file
-    ├── SQL_DEVELOPER_GUIDE.md                   # Complete SQL documentation
-    ├── SQL_SCHEMA_VERIFICATION_COMPLETE.md      # Verification report
-    ├── PROJECT_COMPLETION_SUMMARY.md            # Project overview
-    ├── TERRAFORM_GUIDE.md                       # Terraform deployment
-    ├── TERRAFORM_BIGQUERY_TF_REFACTORED.md      # BigQuery TF guide
-    ├── TERRAFORM_GCS_REFACTORED.md              # GCS TF guide
-    ├── BIGQUERY_SCHEMAS_REFACTORED.md           # Schema documentation
-    ├── BIGQUERY_VIEWS_REFACTORED.md             # View documentation
-    ├── GCP_SETUP_GUIDE.md                       # End-to-end GCP setup
-    ├── SERVICE_ACCOUNTS.md                      # IAM configuration
-    ├── SQL_PLACEHOLDERS_REFACTORED.md           # Placeholder system
-    ├── BIGQUERY_SQL_SCHEMA_MAPPING.md           # 1:1 mapping
-    ├── DOCUMENTATION_AUDIT_REPORT.md            # Audit results
-    ├── TERRAFORM_RESOURCES_SUMMARY.md           # Resource reference
-    └── BIGQUERY_TERRAFORM_SUMMARY.md            # Configuration reference
+
+📚 Documentation/                           ← PRIMARY (All 21 guides here)
+   ├── README.md                           ← Entry point
+   ├── DOCUMENTATION.md                    ← Master index
+   ├── GITHUB_PAGES_SETUP.md               ← GitHub Pages guide
+   ├── _config.yml                         ← Jekyll configuration
+   │
+   ├─ Core Guides:
+   │  ├── TERRAFORM.md                     ← Infrastructure as Code
+   │  ├── AIRFLOW.md                       ← Orchestration (Cloud Composer)
+   │  ├── BIGQUERY.md                      ← Data Warehouse (12 objects)
+   │  ├── DATAFLOW.md                      ← ETL Pipeline (Apache Beam)
+   │  ├── SCHEMA_VALIDATION.md             ← Data Quality & Drift
+   │  ├── CLOUD_FUNCTION.md                ← Event-Driven Triggers
+   │  ├── CONFIG.md                        ← Configuration Reference
+   │  └── INGESTION.md                     ← Data Ingestion
+   │
+   └─ Setup & Reference:
+      ├── GCP_PROJECT.md                   ← GCP Setup (step-by-step)
+      ├── GIT_SETUP.md                     ← GitHub Management
+      ├── MONITORING_AUDIT_LOGS.md         ← Operations & Logging
+      ├── PROJECT_COMPLETE_SUMMARY.md      ← Project Status
+      ├── ARCHITECTURE.md                  ← System Design
+      ├── GCP_SETUP_GUIDE.md               ← Detailed GCP Setup
+      ├── RAPIDAPI_KEY_SETUP_GUIDE.md      ← API Key Configuration
+      ├── SERVICE_ACCOUNTS.md              ← IAM & Permissions
+      ├── SQL_DEVELOPER_GUIDE.md           ← SQL Development
+      ├── CONTRIBUTING.md                  ← Contribution Rules
+      └── DOCUMENTATION_AUDIT_REPORT.md    ← Documentation Audit
+
+🏗️ infrastructure/                          ← Infrastructure & CI/CD
+   ├── terraform/
+   │   ├── main.tf                         ← APIs, service accounts, scheduler
+   │   ├── bigquery.tf                     ← 12 BigQuery resources
+   │   ├── gcs.tf                          ← 3 GCS buckets
+   │   ├── cloud_composer.tf               ← Airflow orchestration
+   │   ├── variables.tf                    ← 30+ configurable variables
+   │   ├── outputs.tf                      ← Resource outputs
+   │   └── terraform.tfvars.example        ← Example configuration
+   │
+   └── .github/
+       └── workflows/
+           └── deploy-docs.yml             ← GitHub Pages auto-deployment
+
+🔄 pipeline/                                ← Data Pipeline Code
+   │
+   ├── config/
+   │   └── config.yaml                     ← Central configuration (SOURCE OF TRUTH)
+   │
+   ├── bigquery/
+   │   ├── schemas/ (12 JSON files - 1:1 with SQL)
+   │   │   ├── raw_batting_rankings.json
+   │   │   ├── vw_latest_raw.json
+   │   │   ├── dim_player.json
+   │   │   ├── dim_country.json
+   │   │   ├── dim_format.json
+   │   │   ├── dim_date.json
+   │   │   ├── fact_batting_rankings.json
+   │   │   ├── vw_batting_rankings_latest.json
+   │   │   ├── vw_batting_rankings_90day_trend.json
+   │   │   ├── vw_top_10_batsmen_by_format.json
+   │   │   ├── vw_batting_statistics_by_country.json
+   │   │   └── vw_ranking_comparison_cross_format.json
+   │   │
+   │   └── sql/ (12 SQL files - meaningful names)
+   │       ├── raw_batting_rankings.sql
+   │       ├── vw_latest_raw.sql
+   │       ├── dim_player.sql
+   │       ├── dim_country.sql
+   │       ├── dim_format.sql
+   │       ├── dim_date.sql
+   │       ├── fact_batting_rankings.sql
+   │       ├── vw_batting_rankings_latest.sql
+   │       ├── vw_batting_rankings_90day_trend.sql
+   │       ├── vw_top_10_batsmen_by_format.sql
+   │       ├── vw_batting_statistics_by_country.sql
+   │       └── vw_ranking_comparison_cross_format.sql
+   │
+   ├── ingestion/
+   │   ├── fetch_batting_rankings.py       ← API ingestion script
+   │   └── requirements.txt
+   │
+   ├── cloud_function/
+   │   ├── main.py                         ← GCS trigger → Dataflow
+   │   └── requirements.txt
+   │
+   ├── dataflow/
+   │   ├── pipeline.py                     ← Apache Beam pipeline
+   │   ├── Dockerfile                      ← Flex Template container
+   │   └── requirements.txt
+   │
+   └── airflow/
+       ├── dags/
+       │   ├── cricket_analytics_dag.py    ← Main orchestration DAG
+       │   └── data_quality_monitoring_dag.py
+       ├── composer_config.yaml
+       └── requirements.txt
+
+└── README.md                               ← This file (root entry)
 ```
 
 ---
 
 ## 🎯 What's Special About This Pipeline
 
-### 1. **Zero Hardcoding**
+### 1. **Documentation-First Organization**
 ```
-config/config.yaml (Single Source of Truth)
-    ↓
-terraform/variables.tf (Read values)
-    ↓
-terraform/*.tf (Create resources)
-    ↓
-bigquery/sql/*.sql (Execute with placeholders)
+📚 Documentation/              (PRIMARY - All guides here)
+   ├── 21 comprehensive markdown files
+   ├── Master index (DOCUMENTATION.md)
+   ├── GitHub Pages ready (_config.yml)
+   └── Cross-linked navigation
 ```
+Users start with Documentation/ folder - clear, organized, professional.
 
-All resource names, dataset names, bucket names are configurable via `config.yaml`.
+### 2. **Zero Hardcoding**
+```
+pipeline/config/config.yaml  (Single Source of Truth)
+    ↓
+infrastructure/terraform/variables.tf (Read values)
+    ↓
+infrastructure/terraform/*.tf (Create resources)
+    ↓
+pipeline/bigquery/sql/*.sql (Execute with placeholders)
+```
+All resource names, dataset names, bucket names configurable via one file.
 
-### 2. **Perfect SQL-Schema Alignment**
-- 12 SQL files
-- 12 matching schema files (JSON)
+### 3. **Perfect SQL-Schema Alignment**
+- 12 SQL files in `pipeline/bigquery/sql/`
+- 12 JSON schema files in `pipeline/bigquery/schemas/`
 - 100% verification complete
 - 1:1 mapping (file name = object name)
+- 68 columns fully documented
 
-### 3. **Production-Grade Documentation**
-- 16 comprehensive guides
-- Developer guide with examples
-- Complete architecture documentation
-- Troubleshooting & best practices
+### 4. **Organized Code Structure**
+```
+infrastructure/     → Terraform + CI/CD (.github)
+pipeline/          → All data pipeline code
+Documentation/     → All documentation (primary)
+```
+Clear separation: infrastructure vs pipeline code. Easy to navigate and extend.
 
-### 4. **Modular Architecture**
-- Separate files for each table/view
-- Easy to extend and modify
-- Clear dependencies
-- Single responsibility principle
+### 5. **Production-Grade**
+- 21 comprehensive guides with examples
+- GitHub Pages automatic deployment
+- Complete monitoring & logging setup
+- CI/CD workflows included
+- Troubleshooting & best practices documented
 
 ---
 
@@ -331,42 +373,63 @@ All resource names, dataset names, bucket names are configurable via `config.yam
 
 ---
 
-## 🚀 Quick Start (5 Minutes)
+## 🚀 Quick Start
 
-### Prerequisites
+### Step 1: Read Documentation ⭐
 ```bash
-# Install tools
-gcloud auth login
-gcloud config set project YOUR_PROJECT_ID
-terraform version        # >= 1.0
-python --version         # >= 3.11
-bq version              # BigQuery CLI
+# Start here - comprehensive guides in Documentation/
+open Documentation/README.md
+open Documentation/DOCUMENTATION.md          # Master index
 ```
 
-### 1. Configure
+### Step 2: GCP Setup
 ```bash
-# Copy example config
-cp config/config.yaml.example config/config.yaml
-# Edit with your values (GCP project, region, API key)
+# Follow detailed setup guide
+open Documentation/GCP_PROJECT.md            # Step-by-step
+# OR
+open Documentation/GCP_SETUP_GUIDE.md        # Alternative guide
 ```
 
-### 2. Deploy Infrastructure
+### Step 3: Configure Project
 ```bash
-cd terraform
+# Copy and customize configuration
+cp pipeline/config/config.yaml.example pipeline/config/config.yaml
+# Edit with your GCP project ID, region, and API key
+nano pipeline/config/config.yaml
+
+# Set environment variable for API key
+export RAPIDAPI_KEY="your-api-key-here"
+```
+
+### Step 4: Deploy Infrastructure
+```bash
+# Deploy all GCP resources via Terraform
+cd infrastructure/terraform
 terraform init
 terraform plan
 terraform apply
-cd ..
+cd ../../
 ```
 
-### 3. Create BigQuery Objects
+### Step 5: Create BigQuery Objects
 ```bash
-# All 12 SQL files execute in order automatically
-# Or manually (with placeholder substitution):
-for f in bigquery/sql/*.sql; do
-  bq query --use_legacy_sql=false < "$f"
+# All 12 SQL files create tables/views
+# Execute with placeholder substitution
+for f in pipeline/bigquery/sql/*.sql; do
+  sed "s/{PROJECT_ID}/your-project-id/g; s/{RAW_DATASET}/cricket_raw/g" "$f" | bq query --use_legacy_sql=false
 done
 ```
+
+### Step 6: Test Pipeline
+```bash
+# Run manual ingestion test
+python pipeline/ingestion/fetch_batting_rankings.py
+
+# Or trigger via GCS upload
+gsutil cp test.csv gs://cricket-raw-data-PROJECT_ID/batting/
+```
+
+**Documentation**: All detailed guides are in `Documentation/` folder with links and examples.
 
 ### 4. Verify
 ```bash

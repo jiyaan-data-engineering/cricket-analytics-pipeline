@@ -58,10 +58,10 @@ The website will automatically serve:
 ## 📄 File Structure
 
 ```
-docs/
+Documentation/
 ├── README.md                    ← Home page
 ├── DOCUMENTATION.md             ← Navigation hub
-├── _config.yml                  ← Jekyll config (NEW)
+├── _config.yml                  ← Jekyll config
 ├── TERRAFORM.md
 ├── AIRFLOW.md
 ├── BIGQUERY.md

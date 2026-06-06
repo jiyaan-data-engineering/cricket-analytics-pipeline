@@ -425,7 +425,7 @@ Total: **68 columns** fully documented
 
 ## 📚 Related Documentation
 
-- [SQL_DEVELOPER_GUIDE.md](../SQL_DEVELOPER_GUIDE.md) - Detailed SQL guide
+- [SQL_DEVELOPER_GUIDE.md](./SQL_DEVELOPER_GUIDE.md) - Detailed SQL guide
 - [SCHEMA_VALIDATION.md](./SCHEMA_VALIDATION.md) - Schema drift handling
 - [TERRAFORM.md](./TERRAFORM.md) - Infrastructure setup
 

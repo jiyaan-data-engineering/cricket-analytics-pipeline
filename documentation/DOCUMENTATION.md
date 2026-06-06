@@ -199,19 +199,19 @@ Complete summary of project delivery and status.
 ## 📋 Reference Guides
 
 ### Getting Started
-1. **[../README.md](../README.md)** - Main project overview
+1. **[./README.md](./README.md)** - Main project overview
    - Architecture diagram
    - Quick start (5 minutes)
    - Key features
 
 ### Setup & Prerequisites
-2. **[../GCP_SETUP_GUIDE.md](../GCP_SETUP_GUIDE.md)** - GCP project setup
+2. **[./GCP_SETUP_GUIDE.md](./GCP_SETUP_GUIDE.md)** - GCP project setup
    - Enable APIs
    - Create service accounts
    - Set up billing
    - Configure authentication
 
-3. **[../RAPIDAPI_KEY_SETUP_GUIDE.md](../RAPIDAPI_KEY_SETUP_GUIDE.md)** - API key setup
+3. **[./RAPIDAPI_KEY_SETUP_GUIDE.md](./RAPIDAPI_KEY_SETUP_GUIDE.md)** - API key setup
    - Create RapidAPI account
    - Subscribe to Cricbuzz API
    - Get API key
@@ -219,34 +219,34 @@ Complete summary of project delivery and status.
    - Verify setup
 
 ### Security & Compliance
-4. **[../HARDCODING_AUDIT_REPORT.md](../HARDCODING_AUDIT_REPORT.md)** - Zero hardcoding verification
+4. **[./HARDCODING_AUDIT_REPORT.md](./HARDCODING_AUDIT_REPORT.md)** - Zero hardcoding verification
    - Issues found & fixed (5 total)
    - Security best practices
    - Configuration hierarchy
    - Deployment steps
 
-5. **[../SERVICE_ACCOUNTS.md](../SERVICE_ACCOUNTS.md)** - IAM & Service Accounts
+5. **[./SERVICE_ACCOUNTS.md](./SERVICE_ACCOUNTS.md)** - IAM & Service Accounts
    - 3 service accounts (Dataflow, Function, Composer)
    - 12+ IAM roles
    - Permissions matrix
    - Access control
 
 ### Development & Maintenance
-6. **[../SQL_DEVELOPER_GUIDE.md](../SQL_DEVELOPER_GUIDE.md)** - SQL development guide
+6. **[./SQL_DEVELOPER_GUIDE.md](./SQL_DEVELOPER_GUIDE.md)** - SQL development guide
    - All 12 SQL files documented
    - Column definitions (68 total)
    - Example queries
    - Execution order
    - Best practices
 
-7. **[../ARCHITECTURE.md](../ARCHITECTURE.md)** - System architecture
+7. **[./ARCHITECTURE.md](./ARCHITECTURE.md)** - System architecture
    - Complete system design
    - Data flow diagram
    - Component interactions
    - Technical decisions
 
 ### Audits & Reports
-8. **[../DOCUMENTATION_AUDIT_REPORT.md](../DOCUMENTATION_AUDIT_REPORT.md)** - Documentation audit
+8. **[./DOCUMENTATION_AUDIT_REPORT.md](./DOCUMENTATION_AUDIT_REPORT.md)** - Documentation audit
    - Structure review
    - Completeness check
    - Best practices applied
@@ -256,14 +256,14 @@ Complete summary of project delivery and status.
 ## 🎯 Quick Start Paths
 
 ### New User? Start Here
-1. [../README.md](../README.md) - Get overview (5 min)
-2. [../ARCHITECTURE.md](../ARCHITECTURE.md) - Understand design (10 min)
+1. [./README.md](./README.md) - Get overview (5 min)
+2. [./ARCHITECTURE.md](./ARCHITECTURE.md) - Understand design (10 min)
 3. [TERRAFORM.md](./TERRAFORM.md) - Deploy infrastructure (20 min)
-4. [../RAPIDAPI_KEY_SETUP_GUIDE.md](../RAPIDAPI_KEY_SETUP_GUIDE.md) - Configure API (5 min)
+4. [./RAPIDAPI_KEY_SETUP_GUIDE.md](./RAPIDAPI_KEY_SETUP_GUIDE.md) - Configure API (5 min)
 
 ### Developer? Start Here
 1. [BIGQUERY.md](./BIGQUERY.md) - Understand data model
-2. [../SQL_DEVELOPER_GUIDE.md](../SQL_DEVELOPER_GUIDE.md) - Learn SQL objects
+2. [./SQL_DEVELOPER_GUIDE.md](./SQL_DEVELOPER_GUIDE.md) - Learn SQL objects
 3. [SCHEMA_VALIDATION.md](./SCHEMA_VALIDATION.md) - Data quality
 4. [DATAFLOW.md](./DATAFLOW.md) - Pipeline code
 
@@ -271,36 +271,79 @@ Complete summary of project delivery and status.
 1. [TERRAFORM.md](./TERRAFORM.md) - Infrastructure setup
 2. [AIRFLOW.md](./AIRFLOW.md) - Orchestration setup
 3. [DATAFLOW.md](./DATAFLOW.md) - Dataflow deployment
-4. [../GCP_SETUP_GUIDE.md](../GCP_SETUP_GUIDE.md) - GCP configuration
+4. [./GCP_SETUP_GUIDE.md](./GCP_SETUP_GUIDE.md) - GCP configuration
 
 ### Security? Start Here
-1. [../HARDCODING_AUDIT_REPORT.md](../HARDCODING_AUDIT_REPORT.md) - Zero hardcoding verification
-2. [../SERVICE_ACCOUNTS.md](../SERVICE_ACCOUNTS.md) - IAM setup
-3. [../GCP_SETUP_GUIDE.md](../GCP_SETUP_GUIDE.md) - GCP security
+1. [./HARDCODING_AUDIT_REPORT.md](./HARDCODING_AUDIT_REPORT.md) - Zero hardcoding verification
+2. [./SERVICE_ACCOUNTS.md](./SERVICE_ACCOUNTS.md) - IAM setup
+3. [./GCP_SETUP_GUIDE.md](./GCP_SETUP_GUIDE.md) - GCP security
 
 ---
 
-## 📊 File Organization
+## 📊 Project Organization
 
 ```
-docs/
-├── DOCUMENTATION.md          # THIS FILE - Master index
-├── TERRAFORM.md              # Infrastructure as Code (Consolidated)
-├── AIRFLOW.md                # Orchestration (Consolidated)
-├── BIGQUERY.md               # Data Warehouse (Consolidated)
-├── DATAFLOW.md               # ETL Pipeline (Consolidated)
-└── SCHEMA_VALIDATION.md      # Schema & Data Quality (Consolidated)
-
-Root Level (Reference):
-├── README.md                 # Main entry point
-├── ARCHITECTURE.md           # System design
-├── GCP_SETUP_GUIDE.md        # GCP setup
-├── RAPIDAPI_KEY_SETUP_GUIDE.md
-├── SERVICE_ACCOUNTS.md       # IAM configuration
-├── SQL_DEVELOPER_GUIDE.md    # SQL development
-├── HARDCODING_AUDIT_REPORT.md
-├── DOCUMENTATION_AUDIT_REPORT.md
-└── INDEX.md                  # Topic index
+cricket-analytics-pipeline/
+├── 📚 Documentation/              ← PRIMARY (All docs here)
+│   ├── README.md                 ← Entry point
+│   ├── DOCUMENTATION.md          ← Master index (THIS FILE)
+│   ├── _config.yml               ← Jekyll config
+│   ├── TERRAFORM.md              ← Infrastructure guide
+│   ├── AIRFLOW.md                ← Orchestration guide
+│   ├── BIGQUERY.md               ← Data warehouse guide
+│   ├── DATAFLOW.md               ← ETL pipeline guide
+│   ├── SCHEMA_VALIDATION.md      ← Data quality guide
+│   ├── CLOUD_FUNCTION.md         ← Event trigger guide
+│   ├── CONFIG.md                 ← Configuration guide
+│   ├── INGESTION.md              ← Ingestion guide
+│   ├── GCP_PROJECT.md            ← GCP setup guide
+│   ├── GIT_SETUP.md              ← GitHub guide
+│   ├── MONITORING_AUDIT_LOGS.md  ← Operations guide
+│   ├── PROJECT_COMPLETE_SUMMARY.md ← Status
+│   ├── ARCHITECTURE.md           ← System design
+│   ├── GCP_SETUP_GUIDE.md        ← GCP setup
+│   ├── RAPIDAPI_KEY_SETUP_GUIDE.md ← API setup
+│   ├── SERVICE_ACCOUNTS.md       ← IAM configuration
+│   ├── SQL_DEVELOPER_GUIDE.md    ← SQL development
+│   ├── CONTRIBUTING.md           ← Contribution rules
+│   └── DOCUMENTATION_AUDIT_REPORT.md ← Doc audit
+│
+├── 🏗️  infrastructure/             ← GCP Infrastructure & CI/CD
+│   ├── terraform/                ← Terraform IaC
+│   │   ├── main.tf
+│   │   ├── bigquery.tf
+│   │   ├── gcs.tf
+│   │   ├── cloud_composer.tf
+│   │   └── variables.tf
+│   └── .github/
+│       └── workflows/            ← GitHub Actions
+│           └── deploy-docs.yml   ← Documentation deployment
+│
+├── 🔄 pipeline/                    ← Data Pipeline Code
+│   ├── bigquery/                 ← Data warehouse
+│   │   ├── sql/                  ← 12 SQL files
+│   │   └── schemas/              ← 12 schema JSON files
+│   ├── dataflow/                 ← ETL pipeline
+│   │   ├── pipeline.py
+│   │   ├── Dockerfile
+│   │   └── requirements.txt
+│   ├── ingestion/                ← API ingestion
+│   │   ├── fetch_batting_rankings.py
+│   │   └── requirements.txt
+│   ├── cloud_function/           ← Event trigger
+│   │   ├── main.py
+│   │   └── requirements.txt
+│   ├── airflow/                  ← Orchestration
+│   │   ├── dags/
+│   │   │   ├── cricket_analytics_dag.py
+│   │   │   └── data_quality_monitoring_dag.py
+│   │   └── composer_config.yaml
+│   └── config/                   ← Configuration
+│       └── config.yaml           ← Central config file
+│
+├── README.md                     ← Project entry point
+├── GITHUB_PAGES_SETUP.md         ← GitHub Pages setup
+└── deploy.sh                     ← One-command deployment
 ```
 
 ---
@@ -323,16 +366,16 @@ Root Level (Reference):
 - [SCHEMA_VALIDATION.md](./SCHEMA_VALIDATION.md) - Validation, drift, monitoring
 
 ### Setup & Configuration
-- [../GCP_SETUP_GUIDE.md](../GCP_SETUP_GUIDE.md) - Project setup
-- [../RAPIDAPI_KEY_SETUP_GUIDE.md](../RAPIDAPI_KEY_SETUP_GUIDE.md) - API key
+- [./GCP_SETUP_GUIDE.md](./GCP_SETUP_GUIDE.md) - Project setup
+- [./RAPIDAPI_KEY_SETUP_GUIDE.md](./RAPIDAPI_KEY_SETUP_GUIDE.md) - API key
 
 ### Security & Compliance
-- [../HARDCODING_AUDIT_REPORT.md](../HARDCODING_AUDIT_REPORT.md) - Zero hardcoding
-- [../SERVICE_ACCOUNTS.md](../SERVICE_ACCOUNTS.md) - IAM & permissions
+- [./HARDCODING_AUDIT_REPORT.md](./HARDCODING_AUDIT_REPORT.md) - Zero hardcoding
+- [./SERVICE_ACCOUNTS.md](./SERVICE_ACCOUNTS.md) - IAM & permissions
 
 ### Development
-- [../SQL_DEVELOPER_GUIDE.md](../SQL_DEVELOPER_GUIDE.md) - SQL queries
-- [../ARCHITECTURE.md](../ARCHITECTURE.md) - System design
+- [./SQL_DEVELOPER_GUIDE.md](./SQL_DEVELOPER_GUIDE.md) - SQL queries
+- [./ARCHITECTURE.md](./ARCHITECTURE.md) - System design
 
 ---
 
@@ -375,7 +418,7 @@ Root Level (Reference):
 ## 🚀 How to Use This Documentation
 
 ### For Reading
-1. Start with [../README.md](../README.md) for overview
+1. Start with [./README.md](./README.md) for overview
 2. Pick your path (New User / Developer / DevOps / Security)
 3. Jump to relevant category file
 4. Reference other docs as needed
@@ -399,13 +442,13 @@ Root Level (Reference):
 
 | Topic | Document |
 |-------|----------|
-| **How do I set up GCP?** | [GCP_SETUP_GUIDE.md](../GCP_SETUP_GUIDE.md) |
+| **How do I set up GCP?** | [GCP_SETUP_GUIDE.md](./GCP_SETUP_GUIDE.md) |
 | **How do I deploy infrastructure?** | [TERRAFORM.md](./TERRAFORM.md) |
 | **How do I set up Airflow?** | [AIRFLOW.md](./AIRFLOW.md) |
-| **How do I write SQL?** | [../SQL_DEVELOPER_GUIDE.md](../SQL_DEVELOPER_GUIDE.md) |
-| **What's the architecture?** | [../ARCHITECTURE.md](../ARCHITECTURE.md) |
-| **How do I get my API key?** | [../RAPIDAPI_KEY_SETUP_GUIDE.md](../RAPIDAPI_KEY_SETUP_GUIDE.md) |
-| **What about security?** | [../HARDCODING_AUDIT_REPORT.md](../HARDCODING_AUDIT_REPORT.md) |
+| **How do I write SQL?** | [./SQL_DEVELOPER_GUIDE.md](./SQL_DEVELOPER_GUIDE.md) |
+| **What's the architecture?** | [./ARCHITECTURE.md](./ARCHITECTURE.md) |
+| **How do I get my API key?** | [./RAPIDAPI_KEY_SETUP_GUIDE.md](./RAPIDAPI_KEY_SETUP_GUIDE.md) |
+| **What about security?** | [./HARDCODING_AUDIT_REPORT.md](./HARDCODING_AUDIT_REPORT.md) |
 
 ---
 

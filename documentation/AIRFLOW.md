@@ -545,8 +545,8 @@ gcloud composer environments update cricket-analytics-composer \
 ## 📚 Related Files
 
 - [TERRAFORM.md](./TERRAFORM.md) - Cloud Composer infrastructure setup
-- [ARCHITECTURE.md](../ARCHITECTURE.md) - Overall architecture
-- [GCP_SETUP_GUIDE.md](../GCP_SETUP_GUIDE.md) - GCP prerequisites
+- [ARCHITECTURE.md](./ARCHITECTURE.md) - Overall architecture
+- [GCP_SETUP_GUIDE.md](./GCP_SETUP_GUIDE.md) - GCP prerequisites
 
 ---
 

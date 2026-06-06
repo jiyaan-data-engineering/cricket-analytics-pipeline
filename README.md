@@ -6,6 +6,18 @@
 
 End-to-end GCP data engineering pipeline that ingests ICC Men's Batting Rankings from Cricbuzz API, processes it through Apache Beam Dataflow, and surfaces it in BigQuery with Medallion Architecture (Raw → Staging → Curated) for analytics and dashboard visualization.
 
+---
+
+## 📚 **START HERE: [Documentation/README.md](./Documentation/README.md)**
+
+**All comprehensive documentation is in the `Documentation/` folder:**
+- Master Index: [Documentation/DOCUMENTATION.md](./Documentation/DOCUMENTATION.md)
+- Setup Guide: [Documentation/GCP_PROJECT.md](./Documentation/GCP_PROJECT.md)
+- Architecture: [Documentation/ARCHITECTURE.md](./Documentation/ARCHITECTURE.md)
+- Complete Guides: 18+ detailed category guides
+
+---
+
 **Key Features**:
 - ✅ Zero hardcoding - Everything configurable
 - ✅ Complete Infrastructure as Code (Terraform)

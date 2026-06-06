@@ -289,10 +289,10 @@ gsutil acl set private gs://cricket-raw-data-$PROJECT_ID
 
 Once GCP project is ready:
 
-1. [../CONFIG.md](../docs/CONFIG.md) - Configure config.yaml with your project ID
+1. [./CONFIG.md](../docs/CONFIG.md) - Configure config.yaml with your project ID
 2. [GIT_SETUP.md](./GIT_SETUP.md) - Set up Git & GitHub
 3. [TERRAFORM.md](./TERRAFORM.md) - Deploy infrastructure
-4. [../RAPIDAPI_KEY_SETUP_GUIDE.md](../RAPIDAPI_KEY_SETUP_GUIDE.md) - Get RapidAPI key
+4. [./RAPIDAPI_KEY_SETUP_GUIDE.md](./RAPIDAPI_KEY_SETUP_GUIDE.md) - Get RapidAPI key
 
 ---
 

@@ -254,7 +254,7 @@ cricket-analytics-pipeline/
 
 ### For Developers
 
-1. **Understand**: [docs/ARCHITECTURE.md](../ARCHITECTURE.md) or [docs/BIGQUERY.md](./docs/BIGQUERY.md)
+1. **Understand**: [docs/ARCHITECTURE.md](./ARCHITECTURE.md) or [docs/BIGQUERY.md](./docs/BIGQUERY.md)
 2. **Modify**: SQL files in `bigquery/sql/`
 3. **Test**: Query in BigQuery console
 4. **Deploy**: Re-run `terraform apply`
@@ -287,7 +287,7 @@ cricket-analytics-pipeline/
 
 ### Built-in Documentation
 - [Complete SQL Developer Guide](./SQL_DEVELOPER_GUIDE.md)
-- [Architecture Overview](../ARCHITECTURE.md)
+- [Architecture Overview](./ARCHITECTURE.md)
 - [Terraform Infrastructure Guide](./docs/TERRAFORM.md)
 - [BigQuery Data Model](./docs/BIGQUERY.md)
 - [Airflow Orchestration](./docs/AIRFLOW.md)

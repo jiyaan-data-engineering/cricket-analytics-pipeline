@@ -627,9 +627,9 @@ cp terraform.tfstate terraform.tfstate.backup
 
 ## 📚 Related Files
 
-- [GCP_SETUP_GUIDE.md](../GCP_SETUP_GUIDE.md) - GCP project setup
-- [ARCHITECTURE.md](../ARCHITECTURE.md) - System architecture
-- [SERVICE_ACCOUNTS.md](../SERVICE_ACCOUNTS.md) - IAM details
+- [GCP_SETUP_GUIDE.md](./GCP_SETUP_GUIDE.md) - GCP project setup
+- [ARCHITECTURE.md](./ARCHITECTURE.md) - System architecture
+- [SERVICE_ACCOUNTS.md](./SERVICE_ACCOUNTS.md) - IAM details
 
 ---
 

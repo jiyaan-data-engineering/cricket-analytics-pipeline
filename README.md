@@ -19,173 +19,157 @@ End-to-end GCP data engineering pipeline that ingests ICC Men's Batting Rankings
 ## 📊 Complete Architecture Overview
 
 ### **Path 1: Event-Driven (Real-Time)**
-```
-┌──────────────────────────────────────────────────────────────────────────────┐
-│                        CRICBUZZ API (RapidAPI)                              │
-│                    ICC Men's Batting Rankings Data                          │
-└────────────────────────────┬─────────────────────────────────────────────────┘
-                             │
-                    ┌────────▼────────┐
-                    │  Cloud Run Job  │
-                    │  (Ingestion)    │
-                    │ Scheduled 6:00  │
-                    │  UTC Daily      │
-                    └────────┬────────┘
-                             │
-                    ┌────────▼────────────────────┐
-                    │ Fetch Batting Rankings      │
-                    │ Generate CSV                │
-                    │ Upload to GCS               │
-                    └────────┬────────────────────┘
-                             │
-                    ┌────────▼──────────────────────┐
-                    │   Google Cloud Storage        │
-                    │   gs://cricket-raw-data/      │
-                    │   Bucket (Finalization Event) │
-                    └────────┬──────────────────────┘
-                             │
-                    ┌────────▼─────────────────────┐
-                    │ Eventarc Trigger             │
-                    │ (GCS→Cloud Function)         │
-                    └────────┬─────────────────────┘
-                             │
-                    ┌────────▼──────────────────────┐
-                    │ Cloud Function 2nd Gen       │
-                    │ (Validate & Launch)          │
-                    └────────┬──────────────────────┘
-                             │
-                    ┌────────▼──────────────────────────┐
-                    │ Apache Beam / Dataflow           │
-                    │ (Flex Template - Python)         │
-                    │ • Read CSV from GCS              │
-                    │ • Validate rows                  │
-                    │ • Type casting                   │
-                    │ • Write to BigQuery RAW          │
-                    └────────┬──────────────────────────┘
-                             │
-└──────────────────────────────┘
 
+```
+CRICBUZZ API (RapidAPI)
+       |
+       v
+   Cloud Run Job
+   (Scheduled 06:00 UTC)
+       |
+       v
+   Fetch Rankings → Generate CSV → Upload to GCS
+       |
+       v
+   Google Cloud Storage (gs://cricket-raw-data/)
+   [Finalized Event Trigger]
+       |
+       v
+   Eventarc (GCS → Cloud Function)
+       |
+       v
+   Cloud Function 2nd Gen
+   (Validate & Launch Dataflow)
+       |
+       v
+   Apache Beam / Dataflow
+   - Read CSV from GCS
+   - Validate & parse rows
+   - Type casting
+   - Write to BigQuery RAW
+       |
+       v
+   BigQuery RAW LAYER
 ```
 
 ### **Path 2: Orchestration (Data Transformation)**
+
 ```
-┌──────────────────────────────────────────────────────────────────────────────┐
-│              Cloud Composer (Apache Airflow 2.7.3)                           │
-│              cricket-analytics-composer DAG                                  │
-│  ┌────────────────────────────────────────────────────────────────┐         │
-│  │ Daily Orchestration (Triggered after ingestion complete)      │         │
-│  │                                                                │         │
-│  │  INGESTION_TG → PROCESSING_TG → VALIDATION_TG →              │         │
-│  │  STAGING_TRANSFORMATION → NOTIFY_COMPLETION                  │         │
-│  │                                                                │         │
-│  │  • Orchestrates entire pipeline                              │         │
-│  │  • Retry logic for failed tasks                              │         │
-│  │  • SLA monitoring & alerts                                   │         │
-│  │  • Data quality checks                                       │         │
-│  └────────────────────────────────────────────────────────────────┘         │
-└──────────────────────────────────────────────────────────────────────────────┘
-                             │
-                             │
-┌───────────────────────────▼──────────────────────────────────────────────────┐
-│                       BIGQUERY MEDALLION ARCHITECTURE                        │
-│                                                                              │
-│  ╔═══════════════════════════════════════════════════════════════════════╗  │
-│  ║ 🔴 RAW LAYER - Exact API Copy (90-day retention)                   ║  │
-│  ║ ┌─────────────────────────────────────────────────────────────────┐ ║  │
-│  ║ │ 📊 batting_rankings (Table)                                    │ ║  │
-│  ║ │   Columns: 11 (rank, player_id, rating, points, format, etc) │ ║  │
-│  ║ │   Partitioned: DATE(ingested_at)                             │ ║  │
-│  ║ │   Clustered: format, country                                 │ ║  │
-│  ║ │   Records: ~300-500 daily (3 formats)                        │ ║  │
-│  ║ ├─────────────────────────────────────────────────────────────────┤ ║  │
-│  ║ │ 🔍 vw_latest_raw (Debug View)                                │ ║  │
-│  ║ │   Latest 100 records per format per day                      │ ║  │
-│  ║ └─────────────────────────────────────────────────────────────────┘ ║  │
-│  ╚═════════════════════════════════════════════════════════════════════╝  │
-│                                    ↓                                        │
-│  ╔═══════════════════════════════════════════════════════════════════════╗  │
-│  ║ 🟠 STAGING LAYER - Star Schema with SCD Type 1                      ║  │
-│  ║ ┌─────────────────────────────────────────────────────────────────┐ ║  │
-│  ║ │ DIMENSIONS:                                                    │ ║  │
-│  ║ │ • dim_player (4 cols) - Player info, SCD Type 1             │ ║  │
-│  ║ │ • dim_country (4 cols) - Country name + ICC code            │ ║  │
-│  ║ │ • dim_format (3 cols) - TEST(1), ODI(2), T20I(3)           │ ║  │
-│  ║ │ • dim_date (10 cols) - Date spine 2015-2035 (7305 rows)    │ ║  │
-│  ║ ├─────────────────────────────────────────────────────────────────┤ ║  │
-│  ║ │ FACTS:                                                        │ ║  │
-│  ║ │ • fact_batting_rankings (11 cols)                           │ ║  │
-│  ║ │   Daily snapshot per player per format                      │ ║  │
-│  ║ │   Composite Key: YYYYMMDD-player_id-format_id              │ ║  │
-│  ║ │   Partitioned: loaded_at                                    │ ║  │
-│  ║ │   Clustered: format_id, country_id                          │ ║  │
-│  ║ │   Update: MERGE (UPSERT) for idempotency                   │ ║  │
-│  ║ └─────────────────────────────────────────────────────────────────┘ ║  │
-│  ╚═════════════════════════════════════════════════════════════════════╝  │
-│                                    ↓                                        │
-│  ╔═══════════════════════════════════════════════════════════════════════╗  │
-│  ║ 🟢 CURATED LAYER - Analytics Views (Pre-Joined)                     ║  │
-│  ║ ┌─────────────────────────────────────────────────────────────────┐ ║  │
-│  ║ │ 1️⃣  vw_batting_rankings_latest (9 cols)                        │ ║  │
-│  ║ │   Current rankings for all players, all formats              │ ║  │
-│  ║ │                                                              │ ║  │
-│  ║ │ 2️⃣  vw_batting_rankings_90day_trend (8 cols)                  │ ║  │
-│  ║ │   Historical progression with rank deltas (LAG window)      │ ║  │
-│  ║ │                                                              │ ║  │
-│  ║ │ 3️⃣  vw_top_10_batsmen_by_format (9 cols)                     │ ║  │
-│  ║ │   Top 10 players in each format                             │ ║  │
-│  ║ │                                                              │ ║  │
-│  ║ │ 4️⃣  vw_batting_statistics_by_country (8 cols)               │ ║  │
-│  ║ │   Country aggregates: player counts, avg ratings            │ ║  │
-│  ║ │                                                              │ ║  │
-│  ║ │ 5️⃣  vw_ranking_comparison_cross_format (9 cols)             │ ║  │
-│  ║ │   Player rankings across TEST, ODI, T20I (pivoted)         │ ║  │
-│  ║ └─────────────────────────────────────────────────────────────────┘ ║  │
-│  ╚═════════════════════════════════════════════════════════════════════╝  │
-│                                    ↓                                        │
-└──────────────────────────────────────────────────────────────────────────────┘
-                                    │
-                    ┌───────────────▼────────────────┐
-                    │  📊 LOOKER STUDIO DASHBOARD   │
-                    │                               │
-                    │ • Rankings Overview           │
-                    │ • Player Trends (90-day)      │
-                    │ • Top 10 Analysis             │
-                    │ • Country Comparison          │
-                    │ • Format Specialization       │
-                    │                               │
-                    │ Auto-refreshing every hour    │
-                    └───────────────────────────────┘
+Cloud Composer (Apache Airflow 2.7.3)
+cricket-analytics-composer DAG
+
+Daily Orchestration Pipeline:
+├─ INGESTION_TG
+├─ PROCESSING_TG
+├─ VALIDATION_TG
+├─ STAGING_TRANSFORMATION
+│  ├─ Load dim_player
+│  ├─ Load dim_country
+│  ├─ Load dim_format
+│  ├─ Load dim_date
+│  └─ Load fact_batting_rankings
+└─ NOTIFY_COMPLETION
+
+Features:
+• Orchestrates entire pipeline
+• Retry logic for failed tasks
+• SLA monitoring & alerts
+• Data quality checks
 ```
 
-### **Supporting Infrastructure**
+### **BigQuery Medallion Architecture**
+
 ```
-┌─────────────────────────────────────────────────────────────────────────┐
-│ GCP SERVICES (All Configured via Terraform + config.yaml)             │
-├─────────────────────────────────────────────────────────────────────────┤
-│ ✅ Cloud Storage (3 buckets)                                          │
-│    • cricket-raw-data           (Raw CSV files)                      │
-│    • cricket-dataflow-templates (Flex Template metadata)             │
-│    • cricket-dataflow-temp      (Dataflow temporary data)            │
-│                                                                      │
-│ ✅ BigQuery (3 datasets, 12 objects)                                 │
-│    • cricket_raw    (1 table + 1 view)                              │
-│    • cricket_staging (5 tables)                                     │
-│    • cricket_curated (5 views)                                      │
-│                                                                      │
-│ ✅ Cloud Logging & Monitoring                                        │
-│    • Function logs, Dataflow metrics, Airflow DAG runs             │
-│                                                                      │
-│ ✅ Service Accounts (3 with IAM roles)                              │
-│    • cricket-dataflow-sa (Dataflow jobs)                           │
-│    • cricket-cloud-function-sa (Function execution)                │
-│    • cricket-composer-sa (Airflow execution)                       │
-│                                                                      │
-│ ✅ Artifact Registry                                                │
-│    • Docker images for Dataflow Flex Templates                     │
-│                                                                      │
-│ ✅ Cloud Scheduler                                                   │
-│    • Daily job @ 06:00 UTC (configurable)                          │
-└─────────────────────────────────────────────────────────────────────────┘
+========================================
+RAW LAYER (90-day retention)
+========================================
+
+[Table] batting_rankings
+├─ Columns: 11
+├─ Partitioned: DATE(ingested_at)
+├─ Clustered: format, country
+└─ Records: ~300-500 daily (3 formats)
+
+[View] vw_latest_raw
+└─ Latest 100 records per format/day
+
+========================================
+STAGING LAYER (Star Schema - SCD Type 1)
+========================================
+
+DIMENSIONS:
+├─ dim_player (4 cols)
+│  └─ Player info + SCD Type 1 updates
+├─ dim_country (4 cols)
+│  └─ Country + ICC codes
+├─ dim_format (3 cols)
+│  └─ TEST(1), ODI(2), T20I(3)
+└─ dim_date (10 cols)
+   └─ Date spine 2015-2035 (7305 rows)
+
+FACTS:
+└─ fact_batting_rankings (11 cols)
+   ├─ Daily snapshot per player/format
+   ├─ Composite Key: YYYYMMDD-player_id-format_id
+   ├─ Partitioned: loaded_at
+   ├─ Clustered: format_id, country_id
+   └─ Update: MERGE (UPSERT) for idempotency
+
+========================================
+CURATED LAYER (Pre-Joined Views)
+========================================
+
+1. vw_batting_rankings_latest (9 cols)
+   └─ Current rankings for all players/formats
+
+2. vw_batting_rankings_90day_trend (8 cols)
+   └─ Historical progression with rank deltas
+
+3. vw_top_10_batsmen_by_format (9 cols)
+   └─ Top 10 players per format
+
+4. vw_batting_statistics_by_country (8 cols)
+   └─ Country aggregates & statistics
+
+5. vw_ranking_comparison_cross_format (9 cols)
+   └─ Player rankings: TEST vs ODI vs T20I
+
+       |
+       v
+   LOOKER STUDIO DASHBOARD
+   (Auto-refresh hourly)
+```
+
+### **Supporting GCP Infrastructure**
+
+```
+Configured via: Terraform + config.yaml
+
+CLOUD STORAGE (3 buckets)
+├─ cricket-raw-data (Raw CSV files)
+├─ cricket-dataflow-templates (Flex Template metadata)
+└─ cricket-dataflow-temp (Dataflow temporary data)
+
+BIGQUERY (3 datasets, 12 objects)
+├─ cricket_raw (1 table + 1 view)
+├─ cricket_staging (5 tables)
+└─ cricket_curated (5 views)
+
+LOGGING & MONITORING
+├─ Cloud Logging (Function/Dataflow/Airflow logs)
+├─ Cloud Monitoring (Metrics & alerts)
+└─ Error reporting & anomaly detection
+
+SERVICE ACCOUNTS (3 with IAM roles)
+├─ cricket-dataflow-sa (Dataflow jobs)
+├─ cricket-cloud-function-sa (Function execution)
+└─ cricket-composer-sa (Airflow execution)
+
+ARTIFACT REGISTRY
+└─ Docker images for Dataflow Flex Templates
+
+SCHEDULING
+└─ Cloud Scheduler (Daily job @ 06:00 UTC)
 ```
 
 ---

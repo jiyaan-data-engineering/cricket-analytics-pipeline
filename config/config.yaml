@@ -1,0 +1,42 @@
+# GCP Cricket Analytics Pipeline Configuration
+
+gcp:
+  project_id: "cricket-analytics-project"  # Replace with your GCP project ID
+  region: "us-central1"
+
+gcs:
+  raw_bucket: "cricket-raw-data"
+  raw_prefix: "batting/"
+  template_bucket: "cricket-dataflow-templates"
+  temp_bucket: "cricket-dataflow-temp"
+
+bigquery:
+  dataset_raw: "cricket_raw"
+  dataset_staging: "cricket_staging"
+  dataset_curated: "cricket_curated"
+  table_raw_batting: "batting_rankings"
+
+apis:
+  rapidapi:
+    base_url: "https://cricbuzz-cricket.p.rapidapi.com"
+    endpoint: "/stats/v1/rankings/batsmen"
+    api_key: "${RAPIDAPI_KEY}"  # Set as environment variable
+    host: "cricbuzz-cricket.p.rapidapi.com"
+
+  formats:
+    - test
+    - odi
+    - t20i
+
+scheduling:
+  ingestion_schedule: "0 6 * * *"  # Daily at 06:00 UTC
+  dataflow_timeout_minutes: 30
+
+dataflow:
+  machine_type: "n1-standard-2"
+  num_workers: 2
+  max_workers: 5
+
+looker:
+  dashboard_title: "Cricket Batting Rankings Analytics"
+  refresh_interval_minutes: 60

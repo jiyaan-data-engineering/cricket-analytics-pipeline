@@ -1,0 +1,132 @@
+# Cloud Composer Configuration for Cricket Analytics Pipeline
+
+# ============================================
+# Environment Configuration
+# ============================================
+
+environment:
+  display_name: "Cricket Analytics Composer"
+  description: "Apache Airflow environment for cricket analytics pipeline"
+  location: us-central1
+  machine_type: n1-standard-4
+
+  # Node configuration
+  node_count: 3
+  disk_size_gb: 30
+
+  # Python version
+  python_version: 3
+
+# ============================================
+# Airflow Configuration
+# ============================================
+
+airflow_config_overrides:
+  core:
+    # Parallelism settings
+    parallelism: 32
+    dag_concurrency: 16
+    max_active_runs_per_dag: 1
+
+    # Task execution
+    task_pool: "default_pool"
+    task_pool_limit: 128
+
+    # DAG directory
+    dags_folder: "/home/airflow/gcs/dags"
+
+  scheduler:
+    # Scheduler settings
+    scheduler_heartbeat_interval: 5
+    max_dagruns_to_create_per_loop: 10
+
+  webserver:
+    # Webserver settings
+    expose_config: "True"
+
+  google_cloud_connection:
+    # Google Cloud connection
+    default_google_cloud_connection: "google_cloud_default"
+
+  celery:
+    # Celery settings
+    result_backend: "db+mysql://{{ ds_nodash }}"
+    broker_url: "redis://:password@broker:6379/0"
+
+# ============================================
+# Environment Variables
+# ============================================
+
+environment_variables:
+  # GCP Configuration
+  GCP_PROJECT_ID: "{{ var.value.gcp_project_id }}"
+  GCP_REGION: "us-central1"
+
+  # BigQuery Configuration
+  BQ_RAW_DATASET: "cricket_raw"
+  BQ_STAGING_DATASET: "cricket_staging"
+  BQ_CURATED_DATASET: "cricket_curated"
+
+  # GCS Configuration
+  RAW_BUCKET: "cricket-raw-data"
+  DATAFLOW_TEMPLATE_BUCKET: "cricket-dataflow-templates"
+
+  # Dataflow Configuration
+  DATAFLOW_MACHINE_TYPE: "n1-standard-2"
+  DATAFLOW_NUM_WORKERS: "2"
+  DATAFLOW_MAX_WORKERS: "5"
+
+  # Airflow Configuration
+  AIRFLOW_VAR_GCP_PROJECT_ID: "{{ var.value.gcp_project_id }}"
+  AIRFLOW__CORE__LOAD_EXAMPLES: "False"
+  AIRFLOW__CORE__LOAD_DEFAULT_CONNECTIONS: "True"
+  AIRFLOW__LOGGING__LOGGING_LEVEL: "INFO"
+
+# ============================================
+# PyPI Packages
+# ============================================
+
+pypi_packages:
+  apache-airflow-providers-google: ">=10.10.1"
+  apache-airflow-providers-apache-beam: ">=5.3.1"
+  pandas: ">=2.1.1"
+  google-cloud-storage: ">=2.10.0"
+  google-cloud-bigquery: ">=3.13.0"
+  pyyaml: ">=6.0.1"
+  requests: ">=2.31.0"
+
+# ============================================
+# System Requirements
+# ============================================
+
+system_requirements:
+  - libffi-dev
+  - libssl-dev
+  - python3-dev
+
+# ============================================
+# IAM Roles
+# ============================================
+
+iam_roles:
+  - roles/composer.worker
+  - roles/bigquery.admin
+  - roles/storage.admin
+  - roles/dataflow.admin
+  - roles/logging.logWriter
+
+# ============================================
+# Network Configuration
+# ============================================
+
+network:
+  # Use VPC-SC (optional)
+  enable_vpc_sc: false
+
+  # Private IP (optional)
+  use_private_ip: false
+
+  # Network tags
+  network_tags:
+    - "composer-environment"
+    - "cricket-analytics"

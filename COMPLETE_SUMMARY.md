@@ -58,7 +58,7 @@ Your cricket-analytics-pipeline is fully prepared and ready to push to GitHub!
 
 ### Option 1: PowerShell Script (Windows - EASIEST)
 ```powershell
-cd C:\satishMudde\claude\P1
+cd C:\satishMudde\claude\cricket-analytics-pipeline
 .\PUSH_TO_GITHUB.ps1
 # Follow the prompts
 ```

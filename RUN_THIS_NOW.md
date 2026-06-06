@@ -20,7 +20,7 @@ PS C:\Users\YourName>
 
 Copy and paste this command:
 ```powershell
-cd C:\satishMudde\claude\P1
+cd C:\satishMudde\claude\cricket-analytics-pipeline
 ```
 
 **Verify you're in the right place by running:**

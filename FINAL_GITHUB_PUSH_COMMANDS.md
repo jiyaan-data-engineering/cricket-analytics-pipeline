@@ -19,7 +19,7 @@ Complete, copy-paste ready commands to push cricket-analytics-pipeline to GitHub
 
 **Windows PowerShell:**
 ```powershell
-cd C:\satishMudde\claude\P1
+cd C:\satishMudde\claude\cricket-analytics-pipeline
 ```
 
 **Windows CMD:**

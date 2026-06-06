@@ -14,7 +14,7 @@ Step 1: Open PowerShell
   • Press: Enter
 
 Step 2: Run These Commands
-  cd C:\satishMudde\claude\P1
+  cd C:\satishMudde\claude\cricket-analytics-pipeline
   .\PUSH_TO_GITHUB.ps1
 
 Step 3: Answer the Prompts

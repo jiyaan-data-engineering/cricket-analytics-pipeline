@@ -33,7 +33,7 @@ https://github.com/jiyaan-data-engineering/cricket-analytics-pipeline.git
 ### 2.1 Navigate to Project Directory
 ```bash
 cd /path/to/cricket-analytics-pipeline
-# Windows: cd c:\satishMudde\claude\P1
+# Windows: cd c:\satishMudde\claude\cricket-analytics-pipeline
 ```
 
 ### 2.2 Check Current Status

@@ -8,7 +8,7 @@ If you prefer manual commands instead of the script, copy and paste these one by
 
 ### Command 1: Navigate to Project
 ```powershell
-cd C:\satishMudde\claude\P1
+cd C:\satishMudde\claude\cricket-analytics-pipeline
 ```
 
 ### Command 2: Verify Files Exist

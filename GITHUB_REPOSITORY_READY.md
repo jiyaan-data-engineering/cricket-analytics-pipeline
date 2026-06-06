@@ -55,7 +55,7 @@ Your cricket-analytics-pipeline repository is fully prepared and ready to push t
 
 **Windows PowerShell:**
 ```powershell
-cd C:\satishMudde\claude\P1
+cd C:\satishMudde\claude\cricket-analytics-pipeline
 .\PUSH_TO_GITHUB.ps1
 # Follow the prompts
 ```
@@ -72,7 +72,7 @@ chmod +x PUSH_TO_GITHUB.sh
 
 ```bash
 # Navigate to project
-cd C:\satishMudde\claude\P1
+cd C:\satishMudde\claude\cricket-analytics-pipeline
 
 # Initialize git
 git init
@@ -207,7 +207,7 @@ Before running the push script:
 - [ ] Repository created: cricket-analytics-pipeline
 - [ ] You have write access to the repository
 - [ ] Git installed on your system: `git --version`
-- [ ] You're in the correct directory: `pwd` or `cd C:\satishMudde\claude\P1`
+- [ ] You're in the correct directory: `pwd` or `cd C:\satishMudde\claude\cricket-analytics-pipeline`
 - [ ] All files present: `ls -la` or `dir`
 
 ---
@@ -331,7 +331,7 @@ You now have:
 For Windows users, I recommend using the **PowerShell script**:
 
 ```powershell
-cd C:\satishMudde\claude\P1
+cd C:\satishMudde\claude\cricket-analytics-pipeline
 .\PUSH_TO_GITHUB.ps1
 ```
 
@@ -362,7 +362,7 @@ This is not just code—it's a **complete learning platform**:
 
 ### In 5 Minutes: Push to GitHub
 ```powershell
-cd C:\satishMudde\claude\P1
+cd C:\satishMudde\claude\cricket-analytics-pipeline
 .\PUSH_TO_GITHUB.ps1
 ```
 

@@ -1,5 +1,5 @@
 # PowerShell Script: Push cricket-analytics-pipeline to GitHub
-# Run from project root directory: C:\satishMudde\claude\P1
+# Run from project root directory: C:\satishMudde\claude\cricket-analytics-pipeline
 
 Write-Host "==========================================`n" -ForegroundColor Green
 Write-Host "Cricket Analytics Pipeline - GitHub Setup`n" -ForegroundColor Green

@@ -1,6 +1,12 @@
--- Create CURATED layer - View: Top 10 Batsmen by Format
--- Purpose: Shows the top 10 ranked batsmen for each cricket format
+-- ============================================================================
+-- Author: Satish Mudde
+-- Created: 2026-06-07
+-- File: vw_top_10_batsmen_by_format.sql
+-- ============================================================================
+-- Purpose: Create CURATED layer - View: Top 10 Batsmen by Format
+-- Shows the top 10 ranked batsmen for each cricket format
 -- Note: Dataset names are placeholders - substitute {STAGING_DATASET} and {CURATED_DATASET} with actual names from config
+-- ============================================================================
 
 CREATE OR REPLACE VIEW `{PROJECT_ID}.{CURATED_DATASET}.vw_top_10_batsmen_by_format` AS
 SELECT

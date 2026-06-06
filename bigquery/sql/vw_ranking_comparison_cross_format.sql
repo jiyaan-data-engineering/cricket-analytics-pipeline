@@ -1,7 +1,13 @@
--- Create CURATED layer - View: Ranking Comparison Across Formats
--- Purpose: Cross-format comparison showing each player's rank in all three formats (TEST, ODI, T20I)
+-- ============================================================================
+-- Author: Satish Mudde
+-- Created: 2026-06-07
+-- File: vw_ranking_comparison_cross_format.sql
+-- ============================================================================
+-- Purpose: Create CURATED layer - View: Ranking Comparison Across Formats
+-- Cross-format comparison showing each player's rank in all three formats (TEST, ODI, T20I)
 -- Format: One row per player with columns for each format's rank and rating
 -- Note: Dataset names are placeholders - substitute {STAGING_DATASET} and {CURATED_DATASET} with actual names from config
+-- ============================================================================
 
 CREATE OR REPLACE VIEW `{PROJECT_ID}.{CURATED_DATASET}.vw_ranking_comparison_cross_format` AS
 SELECT

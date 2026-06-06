@@ -1,6 +1,12 @@
--- Create CURATED layer - View: 90-Day Batting Ranking Trend
--- Purpose: Shows historical ranking progression over last 90 days with rank changes
+-- ============================================================================
+-- Author: Satish Mudde
+-- Created: 2026-06-07
+-- File: vw_batting_rankings_90day_trend.sql
+-- ============================================================================
+-- Purpose: Create CURATED layer - View: 90-Day Batting Ranking Trend
+-- Shows historical ranking progression over last 90 days with rank changes
 -- Note: Dataset names are placeholders - substitute {STAGING_DATASET} and {CURATED_DATASET} with actual names from config
+-- ============================================================================
 
 CREATE OR REPLACE VIEW `{PROJECT_ID}.{CURATED_DATASET}.vw_batting_rankings_90day_trend` AS
 SELECT

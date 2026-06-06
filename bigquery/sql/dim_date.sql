@@ -1,6 +1,12 @@
--- Create STAGING layer - Dimension: Date
+-- ============================================================================
+-- Author: Satish Mudde
+-- Created: 2026-06-07
+-- File: dim_date.sql
+-- ============================================================================
+-- Purpose: Create STAGING layer - Dimension: Date
 -- Generates date dimension for a 10-year period
 -- Note: Dataset names are placeholders - substitute {STAGING_DATASET} with actual dataset name from config
+-- ============================================================================
 
 CREATE OR REPLACE TABLE `{PROJECT_ID}.{STAGING_DATASET}.dim_date` (
   date_id INT64 NOT NULL,

@@ -1,5 +1,11 @@
--- Create STAGING layer - Dimension: Format
+-- ============================================================================
+-- Author: Satish Mudde
+-- Created: 2026-06-07
+-- File: dim_format.sql
+-- ============================================================================
+-- Purpose: Create STAGING layer - Dimension: Format
 -- Note: Dataset names are placeholders - substitute {STAGING_DATASET} with actual dataset name from config
+-- ============================================================================
 
 CREATE OR REPLACE TABLE `{PROJECT_ID}.{STAGING_DATASET}.dim_format` (
   format_id INT64 NOT NULL,

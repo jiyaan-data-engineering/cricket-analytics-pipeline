@@ -1,6 +1,12 @@
--- Create STAGING layer - Dimension: Player
+-- ============================================================================
+-- Author: Satish Mudde
+-- Created: 2026-06-07
+-- File: dim_player.sql
+-- ============================================================================
+-- Purpose: Create STAGING layer - Dimension: Player
 -- Slowly Changing Dimension Type 1 (current attributes only)
 -- Note: Dataset names are placeholders - substitute {RAW_DATASET} and {STAGING_DATASET} with actual names from config
+-- ============================================================================
 
 CREATE OR REPLACE TABLE `{PROJECT_ID}.{STAGING_DATASET}.dim_player` (
   player_id STRING NOT NULL,

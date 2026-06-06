@@ -1,6 +1,12 @@
--- Create STAGING layer - Fact: Batting Rankings
+-- ============================================================================
+-- Author: Satish Mudde
+-- Created: 2026-06-07
+-- File: fact_batting_rankings.sql
+-- ============================================================================
+-- Purpose: Create STAGING layer - Fact: Batting Rankings
 -- Daily snapshot of batting rankings
 -- Note: Dataset names are placeholders - substitute {RAW_DATASET} and {STAGING_DATASET} with actual names from config
+-- ============================================================================
 
 CREATE OR REPLACE TABLE `{PROJECT_ID}.{STAGING_DATASET}.fact_batting_rankings` (
   fact_id STRING NOT NULL,

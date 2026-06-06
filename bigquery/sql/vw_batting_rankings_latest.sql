@@ -1,6 +1,12 @@
--- Create CURATED layer - View: Latest Batting Rankings
--- Purpose: Shows current (today's) batting rankings for all players and formats
+-- ============================================================================
+-- Author: Satish Mudde
+-- Created: 2026-06-07
+-- File: vw_batting_rankings_latest.sql
+-- ============================================================================
+-- Purpose: Create CURATED layer - View: Latest Batting Rankings
+-- Shows current (today's) batting rankings for all players and formats
 -- Note: Dataset names are placeholders - substitute {STAGING_DATASET} and {CURATED_DATASET} with actual names from config
+-- ============================================================================
 
 CREATE OR REPLACE VIEW `{PROJECT_ID}.{CURATED_DATASET}.vw_batting_rankings_latest` AS
 SELECT

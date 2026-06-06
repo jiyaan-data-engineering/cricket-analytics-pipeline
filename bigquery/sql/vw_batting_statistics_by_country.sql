@@ -1,7 +1,13 @@
--- Create CURATED layer - View: Batting Statistics by Country
--- Purpose: Aggregated batting statistics for each country and format
+-- ============================================================================
+-- Author: Satish Mudde
+-- Created: 2026-06-07
+-- File: vw_batting_statistics_by_country.sql
+-- ============================================================================
+-- Purpose: Create CURATED layer - View: Batting Statistics by Country
+-- Aggregated batting statistics for each country and format
 -- Includes: player counts, average ratings, and top player metrics
 -- Note: Dataset names are placeholders - substitute {STAGING_DATASET} and {CURATED_DATASET} with actual names from config
+-- ============================================================================
 
 CREATE OR REPLACE VIEW `{PROJECT_ID}.{CURATED_DATASET}.vw_batting_statistics_by_country` AS
 SELECT

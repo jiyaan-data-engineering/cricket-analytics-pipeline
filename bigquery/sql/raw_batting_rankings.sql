@@ -1,6 +1,12 @@
--- Create RAW layer table for batting rankings
+-- ============================================================================
+-- Author: Satish Mudde
+-- Created: 2026-06-07
+-- File: raw_batting_rankings.sql
+-- ============================================================================
+-- Purpose: Create RAW layer table for batting rankings
 -- This table stores the exact data as ingested from the API
 -- Note: Dataset names are placeholders - substitute {RAW_DATASET} with actual dataset name from config
+-- ============================================================================
 
 CREATE OR REPLACE TABLE `{PROJECT_ID}.{RAW_DATASET}.batting_rankings` (
   rank INT64,

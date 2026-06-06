@@ -98,6 +98,23 @@ jobs:
       - name: 📥 Checkout code
         uses: actions/checkout@v4
 
+      - name: 🔐 Verify GitHub Secrets
+        run: |
+          echo "Checking GitHub secrets..."
+          if [ -z "${{ secrets.GCP_PROJECT_ID }}" ]; then
+            echo "❌ ERROR: GCP_PROJECT_ID secret not found!"
+            exit 1
+          fi
+          if [ -z "${{ secrets.GCP_SERVICE_ACCOUNT_KEY }}" ]; then
+            echo "❌ ERROR: GCP_SERVICE_ACCOUNT_KEY secret not found!"
+            exit 1
+          fi
+          if [ -z "${{ secrets.RAPIDAPI_KEY }}" ]; then
+            echo "❌ ERROR: RAPIDAPI_KEY secret not found!"
+            exit 1
+          fi
+          echo "✅ All secrets are available!"
+
       - name: 🔐 Authenticate to Google Cloud
         uses: google-github-actions/auth@v1
         with:

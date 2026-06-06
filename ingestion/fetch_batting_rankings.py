@@ -4,9 +4,7 @@ Fetch ICC Men's Batting Rankings from Cricbuzz API via RapidAPI.
 Saves timestamped CSV to GCS bucket.
 """
 
-import os
 import sys
-import json
 import logging
 from datetime import datetime
 from pathlib import Path
@@ -29,11 +27,11 @@ def load_config():
     with open(CONFIG_PATH, "r") as f:
         return yaml.safe_load(f)
 
-def get_api_key():
-    """Get RapidAPI key from environment variable."""
-    api_key = os.getenv("RAPIDAPI_KEY")
+def get_api_key(config: dict) -> str:
+    """Get RapidAPI key from config file."""
+    api_key = config.get("apis", {}).get("rapidapi", {}).get("api_key")
     if not api_key:
-        raise ValueError("RAPIDAPI_KEY environment variable not set")
+        raise ValueError("API key not found in config.yaml")
     return api_key
 
 def fetch_rankings(format_type: str, api_key: str, config: dict) -> dict:
@@ -47,36 +45,43 @@ def fetch_rankings(format_type: str, api_key: str, config: dict) -> dict:
 
     params = {
         "formatType": format_type,
-        "rankType": "batsmen"
+        "rankType": api_config.get("rank_type", "batsmen")
     }
 
     url = f"{api_config['base_url']}{api_config['endpoint']}"
+    timeout = api_config.get("request_timeout", 30)
 
     logger.info(f"Fetching {format_type.upper()} batting rankings...")
-    response = requests.get(url, headers=headers, params=params, timeout=30)
+    response = requests.get(url, headers=headers, params=params, timeout=timeout)
     response.raise_for_status()
 
     return response.json()
 
 def parse_rankings(data: dict, format_type: str) -> pd.DataFrame:
     """Parse API response into DataFrame."""
-    if not data or "data" not in data:
+    if not data:
         logger.warning(f"No data returned for {format_type}")
         return pd.DataFrame()
 
+    # Handle both response formats: {"data": {"rank": [...]}} and {"rank": [...]}
+    rank_list = data.get("rank", data.get("data", {}).get("rank", []))
+
+    if not rank_list:
+        logger.warning(f"No rankings found in response for {format_type}")
+        return pd.DataFrame()
+
     rankings = []
-    for rank_entry in data.get("data", {}).get("rank", []):
+    for rank_entry in rank_list:
         try:
-            player = rank_entry.get("player", {})
             rankings.append({
-                "rank": rank_entry.get("rank"),
-                "player_id": player.get("id"),
-                "player_name": player.get("name"),
-                "country": player.get("country"),
-                "country_id": player.get("countryId"),
-                "rating": rank_entry.get("rating"),
-                "points": rank_entry.get("points"),
-                "best_rank": rank_entry.get("bestRank"),
+                "rank": int(rank_entry.get("rank", 0)),
+                "player_id": rank_entry.get("id", ""),
+                "player_name": rank_entry.get("name", ""),
+                "country": rank_entry.get("country", ""),
+                "country_id": rank_entry.get("countryId", ""),
+                "rating": float(rank_entry.get("rating", 0)),
+                "points": float(rank_entry.get("points", 0)),
+                "best_rank": int(rank_entry.get("bestRank", rank_entry.get("rank", 0))),
                 "format": format_type.upper(),
                 "ingested_at": datetime.utcnow().isoformat()
             })
@@ -110,7 +115,7 @@ def main():
     """Main execution flow."""
     try:
         config = load_config()
-        api_key = get_api_key()
+        api_key = get_api_key(config)
 
         all_data = []
 

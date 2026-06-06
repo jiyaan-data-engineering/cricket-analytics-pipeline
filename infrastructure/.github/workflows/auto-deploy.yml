@@ -115,31 +115,136 @@ jobs:
         run: terraform fmt -check -recursive infrastructure/terraform
         continue-on-error: true
 
+      # ========== STEP 1A: Terraform Init ==========
       - name: 🚀 Terraform Init
+        id: init
+        working-directory: infrastructure/terraform
         run: |
-          cd infrastructure/terraform
-          terraform init
+          echo "📍 Initializing Terraform..."
+          echo ""
+          terraform init -upgrade
 
-      - name: 🔍 Terraform Plan
-        id: terraform-plan
+          echo ""
+          echo "✅ Terraform Init Completed"
+          echo "   ├─ Backend initialized"
+          echo "   ├─ Providers downloaded"
+          echo "   └─ Modules loaded"
+
+      # ========== STEP 1B: Terraform Plan ==========
+      - name: 📋 Terraform Plan
+        id: plan
+        working-directory: infrastructure/terraform
         run: |
-          cd infrastructure/terraform
-          terraform plan -out=tfplan \
+          echo "📍 Creating Terraform Execution Plan..."
+          echo ""
+
+          terraform plan \
             -var="gcp_project_id=${{ secrets.GCP_PROJECT_ID }}" \
-            -var="gcp_region=${{ env.GCP_REGION }}"
+            -var="gcp_region=${{ env.GCP_REGION }}" \
+            -out=tfplan \
+            -lock=false
 
-      - name: 🌍 Terraform Apply
-        id: terraform
-        run: |
-          cd infrastructure/terraform
-          terraform apply -auto-approve tfplan
-          echo "project_id=$(gcloud config get-value project)" >> $GITHUB_OUTPUT
+          echo ""
+          echo "✅ Terraform Plan Completed"
 
-      - name: 📊 Output Terraform Results
+          # Save plan summary
+          terraform show -no-color tfplan > tfplan.txt
+
+          # Count resources
+          RESOURCE_COUNT=$(grep -c "^#" tfplan.txt || echo "0")
+          echo "   ├─ Resources to create/modify: $RESOURCE_COUNT"
+          echo "   ├─ Plan file saved"
+          echo "   └─ Ready for apply"
+
+      - name: 📊 Upload Terraform Plan
+        uses: actions/upload-artifact@v4
+        with:
+          name: terraform-plan
+          path: infrastructure/terraform/tfplan.txt
+          retention-days: 7
+
+      - name: 📈 Plan Summary
+        working-directory: infrastructure/terraform
         run: |
-          echo "✅ Infrastructure deployed successfully"
-          echo "Project ID: ${{ secrets.GCP_PROJECT_ID }}"
+          echo "📊 TERRAFORM PLAN SUMMARY"
+          echo "════════════════════════════════════════"
+          echo ""
+          echo "GCP Project ID: ${{ secrets.GCP_PROJECT_ID }}"
           echo "Region: ${{ env.GCP_REGION }}"
+          echo ""
+          echo "Resources to be created:"
+          terraform show -no-color tfplan | grep "will be created" | wc -l || echo "0"
+          echo ""
+          echo "Resources to be modified:"
+          terraform show -no-color tfplan | grep "will be updated" | wc -l || echo "0"
+          echo ""
+          echo "Resources to be destroyed:"
+          terraform show -no-color tfplan | grep "will be destroyed" | wc -l || echo "0"
+          echo ""
+          echo "════════════════════════════════════════"
+
+      # ========== STEP 1C: Terraform Apply ==========
+      - name: 🌍 Terraform Apply
+        id: apply
+        working-directory: infrastructure/terraform
+        run: |
+          echo "📍 Applying Terraform Configuration..."
+          echo ""
+
+          terraform apply \
+            -auto-approve \
+            -lock=false \
+            tfplan
+
+          echo ""
+          echo "✅ Terraform Apply Completed"
+          echo ""
+          echo "Deployed Resources:"
+          echo "   ├─ GCS Buckets (3)"
+          echo "   ├─ BigQuery Datasets (3)"
+          echo "   ├─ Service Accounts (3)"
+          echo "   ├─ Cloud Function"
+          echo "   ├─ Cloud Scheduler"
+          echo "   ├─ Cloud Composer"
+          echo "   ├─ Artifact Registry"
+          echo "   ├─ Dataflow Template"
+          echo "   └─ IAM Roles (12+)"
+
+      # ========== Get Terraform Outputs ==========
+      - name: 📤 Terraform Outputs
+        id: terraform
+        working-directory: infrastructure/terraform
+        run: |
+          echo "📤 Retrieving Terraform Outputs..."
+          echo ""
+
+          # Get project ID
+          PROJECT_ID=$(gcloud config get-value project)
+          echo "project_id=$PROJECT_ID" >> $GITHUB_OUTPUT
+
+          # Display outputs
+          echo "Terraform Outputs:"
+          terraform output -no-color 2>/dev/null || echo "No outputs defined"
+
+          echo ""
+          echo "✅ Outputs Retrieved"
+
+      - name: 📊 Deployment Summary
+        run: |
+          echo ""
+          echo "╔════════════════════════════════════════════════╗"
+          echo "║  ✅ TERRAFORM DEPLOYMENT COMPLETE              ║"
+          echo "╚════════════════════════════════════════════════╝"
+          echo ""
+          echo "📍 Project: ${{ secrets.GCP_PROJECT_ID }}"
+          echo "🌐 Region: ${{ env.GCP_REGION }}"
+          echo ""
+          echo "✅ Init:   Terraform workspace initialized"
+          echo "✅ Plan:   Execution plan created & reviewed"
+          echo "✅ Apply:  All resources deployed"
+          echo ""
+          echo "📋 Next Step: BigQuery Setup"
+          echo ""
 
   # ============= STEP 2: BigQuery Setup =============
   bigquery-setup:

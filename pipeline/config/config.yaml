@@ -1,7 +1,7 @@
 # GCP Cricket Analytics Pipeline Configuration
 
 gcp:
-  project_id: "cricket-analytics-project"  # Replace with your GCP project ID
+  project_id: "cricbuzz-satish-dev"  # Your GCP Project ID
   region: "us-central1"
 
 gcs:

@@ -1,0 +1,40 @@
+# Cricket Analytics Pipeline - Project Information
+# This file documents your GCP project details
+
+GCP_PROJECT_NAME: cricbuzz-satish-dev
+GCP_PROJECT_ID: cricbuzz-satish-dev
+GCP_REGION: us-central1
+
+# Service Accounts
+SERVICE_ACCOUNT_DATAFLOW: cricket-dataflow-sa@cricbuzz-satish-dev.iam.gserviceaccount.com
+SERVICE_ACCOUNT_CLOUD_FUNCTION: cricket-cloud-function-sa@cricbuzz-satish-dev.iam.gserviceaccount.com
+SERVICE_ACCOUNT_COMPOSER: cricket-composer-sa@cricbuzz-satish-dev.iam.gserviceaccount.com
+
+# GCS Buckets
+BUCKET_RAW_DATA: cricket-raw-data-cricbuzz-satish-dev
+BUCKET_DATAFLOW_TEMPLATES: cricket-dataflow-templates-cricbuzz-satish-dev
+BUCKET_DATAFLOW_TEMP: cricket-dataflow-temp-cricbuzz-satish-dev
+
+# BigQuery Datasets
+DATASET_RAW: cricket_raw
+DATASET_STAGING: cricket_staging
+DATASET_CURATED: cricket_curated
+
+# Cloud Resources
+CLOUD_FUNCTION: cricket-gcs-dataflow-trigger
+CLOUD_SCHEDULER_JOB: cricket-daily-ingestion
+CLOUD_COMPOSER_ENV: cricket-analytics-composer
+ARTIFACT_REGISTRY_REPO: cricket-docker
+
+# Access URLs
+BIGQUERY_CONSOLE: https://console.cloud.google.com/bigquery?project=cricbuzz-satish-dev
+DATAFLOW_JOBS: https://console.cloud.google.com/dataflow/jobs?project=cricbuzz-satish-dev
+CLOUD_SCHEDULER: https://console.cloud.google.com/cloudscheduler?project=cricbuzz-satish-dev
+CLOUD_COMPOSER: https://console.cloud.google.com/composer/environments?project=cricbuzz-satish-dev
+CLOUD_LOGGING: https://console.cloud.google.com/logs?project=cricbuzz-satish-dev
+GCS_BUCKETS: https://console.cloud.google.com/storage?project=cricbuzz-satish-dev
+
+# Deployment Information
+DEPLOYMENT_DATE: 2026-06-07
+LAST_DEPLOYMENT_STATUS: SUCCESS
+PIPELINE_STATUS: ACTIVE

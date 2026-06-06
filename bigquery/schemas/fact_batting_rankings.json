@@ -1,0 +1,68 @@
+[
+  {
+    "name": "fact_id",
+    "type": "STRING",
+    "mode": "REQUIRED",
+    "description": "Composite primary key: YYYYMMDD-player_id-format_id"
+  },
+  {
+    "name": "date_id",
+    "type": "INTEGER",
+    "mode": "NULLABLE",
+    "description": "Foreign key to dim_date (YYYYMMDD format)"
+  },
+  {
+    "name": "player_id",
+    "type": "STRING",
+    "mode": "REQUIRED",
+    "description": "Foreign key to dim_player"
+  },
+  {
+    "name": "format_id",
+    "type": "INTEGER",
+    "mode": "NULLABLE",
+    "description": "Foreign key to dim_format (1=TEST, 2=ODI, 3=T20I)"
+  },
+  {
+    "name": "country_id",
+    "type": "STRING",
+    "mode": "NULLABLE",
+    "description": "Foreign key to dim_country"
+  },
+  {
+    "name": "rank",
+    "type": "INTEGER",
+    "mode": "NULLABLE",
+    "description": "Player's current ranking for this format"
+  },
+  {
+    "name": "rating",
+    "type": "FLOAT64",
+    "mode": "NULLABLE",
+    "description": "Player's ICC rating for this format"
+  },
+  {
+    "name": "points",
+    "type": "FLOAT64",
+    "mode": "NULLABLE",
+    "description": "Player's total rating points for this format"
+  },
+  {
+    "name": "best_rank",
+    "type": "INTEGER",
+    "mode": "NULLABLE",
+    "description": "Player's career best rank for this format"
+  },
+  {
+    "name": "source_file",
+    "type": "STRING",
+    "mode": "NULLABLE",
+    "description": "Source CSV filename from GCS"
+  },
+  {
+    "name": "loaded_at",
+    "type": "TIMESTAMP",
+    "mode": "REQUIRED",
+    "description": "Timestamp when record was loaded into fact table"
+  }
+]

@@ -27,9 +27,11 @@ A **production-grade, real-time GCP data pipeline** that ingests ICC Men's Batti
 │  [fetch_batting_rankings.py]                                             │
 │    • Fetches Test, ODI, T20I rankings                                    │
 │    • Converts JSON → CSV                                                  │
-│    • Uploads to GCS: gs://cricket-raw-data/batting/                     │
+│    • Bucket name from config/config.yaml (gcs.raw_bucket)                │
+│    • Uploads to GCS prefix from config.yaml (gcs.raw_prefix): batting/   │
 │    • Triggered daily @ 06:00 UTC by Cloud Scheduler                      │
-│    • Runs as Cloud Run job                                               │
+│    • Schedule from config.yaml (scheduling.ingestion_schedule)           │
+│    • Runs via HTTP trigger from Cloud Scheduler                          │
 └──────────────────────────────────────────────────────────────────────────┘
                                     ↓
 ┌──────────────────────────────────────────────────────────────────────────┐
@@ -38,25 +40,28 @@ A **production-grade, real-time GCP data pipeline** that ingests ICC Men's Batti
 │  GCS Object Finalized Event                                               │
 │    ↓                                                                       │
 │  [Eventarc Trigger]                                                       │
-│    • Listens to: gs://cricket-raw-data/batting/*.csv                    │
+│    • Listens to bucket from config.yaml (gcs.raw_bucket)                │
+│    • Listens to prefix from config.yaml (gcs.raw_prefix): batting/      │
 │    • Invokes Cloud Function on file upload                               │
 │    ↓                                                                       │
 │  [Cloud Function - 2nd Gen]                                              │
-│    • Validates file path matches batting/ prefix                         │
+│    • Validates file path matches prefix from config.yaml                │
 │    • Extracts GCS file URI                                               │
 │    • Calls Dataflow API to launch Flex Template job                      │
-│    • Passes input file path as parameter                                 │
+│    • Service account: cricket-cloud-function-sa (from variables.tf)     │
+│    • Passes input file path as parameters                                │
 └──────────────────────────────────────────────────────────────────────────┘
                                     ↓
 ┌──────────────────────────────────────────────────────────────────────────┐
 │                           PROCESSING LAYER (BATCH)                        │
 │                                                                           │
 │  [Apache Beam Dataflow - Flex Template]                                  │
-│    • ReadFromGCS: Reads CSV from gs://cricket-raw-data/batting/*.csv    │
+│    • ReadFromGCS: Reads from bucket (config.yaml) with prefix            │
 │    • ParseCSV: Converts CSV → structured records                         │
 │    • Schema Validation: Type casting and validation                      │
-│    • WriteToBigQuery: Appends to cricket_raw.batting_rankings            │
-│    • Auto-scales: 2-5 workers based on load                              │
+│    • WriteToBigQuery: Dataset/table from config.yaml + variables.tf      │
+│    • Service account: cricket-dataflow-sa (from variables.tf, lines 51)  │
+│    • Auto-scales: 2-5 workers (configurable in variables.tf)            │
 │    • Monitoring: Cloud Logging integration                               │
 │    • Duration: ~5-10 minutes per run                                     │
 └──────────────────────────────────────────────────────────────────────────┘
@@ -65,60 +70,54 @@ A **production-grade, real-time GCP data pipeline** that ingests ICC Men's Batti
 │                    BIGQUERY DATA WAREHOUSE LAYER                          │
 │                                                                           │
 │  ╔═══════════════════════════════════════════════════════════════╗      │
-│  ║  RAW LAYER (Dataset: cricket_raw)                             ║      │
-│  ║  Table: batting_rankings                                      ║      │
+│  ║  RAW LAYER (Dataset: cricket_raw from config.yaml)            ║      │
+│  ║  Table: batting_rankings (table name from variables.tf)       ║      │
+│  ║  • Schema from: bigquery/schemas/raw_batting_rankings.json    ║      │
 │  ║  • Exact copy of ingested data + metadata                    ║      │
-│  ║  • Partitioned by: DATE(ingested_at)                         ║      │
+│  ║  • Partitioned by: DATE(ingested_at) - 90 day retention      ║      │
 │  ║  • Clustered by: format, country                             ║      │
-│  ║  • Retention: 90 days                                        ║      │
 │  ║  • Columns: rank, player_id, player_name, country, rating,  ║      │
 │  ║             points, best_rank, format, ingested_at, ...      ║      │
+│  ║  • Created by: terraform/bigquery.tf + SQL script            ║      │
 │  ╚═══════════════════════════════════════════════════════════════╝      │
 │                                    ↓                                      │
 │                    [Scheduled Query: Daily @ 08:00 UTC]                   │
 │                                    ↓                                      │
 │  ╔═══════════════════════════════════════════════════════════════╗      │
-│  ║  STAGING LAYER (Dataset: cricket_staging)                    ║      │
+│  ║  STAGING LAYER (Dataset: cricket_staging from config.yaml)   ║      │
 │  ║  STAR SCHEMA DIMENSIONS:                                     ║      │
-│  ║  • dim_player      (player_id, name, country_id)             ║      │
-│  ║  • dim_country     (country_id, name, icc_code)              ║      │
-│  ║  • dim_format      (format_id, format_name)                  ║      │
-│  ║  • dim_date        (date_id, date, week, month, year)        ║      │
+│  ║  • dim_player      (02_create_dim_player.sql)                ║      │
+│  ║  • dim_country     (03_create_dim_country.sql)               ║      │
+│  ║  • dim_format      (04_create_dim_format.sql)                ║      │
+│  ║  • dim_date        (05_create_dim_date.sql)                  ║      │
 │  ║                                                               ║      │
 │  ║  FACT TABLE:                                                 ║      │
-│  ║  • fact_batting_rankings                                     ║      │
+│  ║  • fact_batting_rankings (06_create_fact_batting.sql)        ║      │
 │  ║    (player_id FK, format_id FK, date_id FK, ...)             ║      │
 │  ║                                                               ║      │
-│  ║  Data Refresh: MERGE (UPSERT) after each raw load            ║      │
+│  ║  Data Refresh: MERGE (UPSERT) via scheduled queries          ║      │
 │  ║  Partitioned by: loaded_at                                   ║      │
 │  ║  Clustered by: format_id, country_id                         ║      │
+│  ║  SQL Location: bigquery/sql/02-06_*.sql                      ║      │
 │  ╚═══════════════════════════════════════════════════════════════╝      │
 │                                    ↓                                      │
 │                        [BigQuery Views Created]                           │
 │                                    ↓                                      │
 │  ╔═══════════════════════════════════════════════════════════════╗      │
-│  ║  CURATED LAYER (Dataset: cricket_curated)                    ║      │
-│  ║  Analytics-Ready Views:                                      ║      │
-│  ║  1. vw_current_rankings                                      ║      │
-│  ║     - Latest rank/rating per player+format                   ║      │
-│  ║     - Filtered by CURRENT_DATE()                             ║      │
+│  ║  CURATED LAYER (Dataset: cricket_curated from config.yaml)   ║      │
+│  ║  Analytics-Ready Views (all in 07_create_curated_views.sql)  ║      │
 │  ║                                                               ║      │
-│  ║  2. vw_ranking_trend                                         ║      │
-│  ║     - Historical progression (90 days)                       ║      │
-│  ║     - LAG window for rank changes                            ║      │
+│  ║  1. vw_current_rankings - Latest rank/rating per player+fmt  ║      │
+│  ║  2. vw_ranking_trend - Historical (90 days) with rank change ║      │
+│  ║  3. vw_top10_by_format - Top 10 players per format           ║      │
+│  ║  4. vw_country_summary - Country aggregates (top 50 players) ║      │
+│  ║  5. vw_player_format_comparison - Multi-format comparison    ║      │
 │  ║                                                               ║      │
-│  ║  3. vw_top10_by_format                                       ║      │
-│  ║     - Top 10 players per format                              ║      │
+│  ║  SQL Location: bigquery/sql/07_create_curated_views.sql      ║      │
+│  ║  Query Pattern: SELECT from fact + dimensions with JOINs     ║      │
+│  ║  Materialization: On-demand (views, not materialized)        ║      │
 │  ║                                                               ║      │
-│  ║  4. vw_country_summary                                       ║      │
-│  ║     - Country aggregates (top 50 players)                    ║      │
-│  ║     - Count of top-10, avg rating                            ║      │
-│  ║                                                               ║      │
-│  ║  5. vw_player_format_comparison                              ║      │
-│  ║     - Same player's rank across Test/ODI/T20I                ║      │
-│  ║                                                               ║      │
-│  ║  Query Pattern: SELECT from fact + dimensions, JOIN with     ║      │
-│  ║  date for time-series; materializes on-demand                ║      │
+│  ║  Created by: terraform/bigquery.tf (lines 157-178)           ║      │
 │  ╚═══════════════════════════════════════════════════════════════╝      │
 └──────────────────────────────────────────────────────────────────────────┘
                                     ↓
@@ -145,8 +144,8 @@ A **production-grade, real-time GCP data pipeline** that ingests ICC Men's Batti
 ### Cloud Services
 | Component | Service | Details |
 |-----------|---------|---------|
-| **Ingestion** | Cloud Run + Cloud Scheduler | Python script runs daily, uploads CSV to GCS |
-| **Storage (Raw)** | Google Cloud Storage | `cricket-raw-data` bucket, 90-day retention |
+| **Ingestion** | Cloud Scheduler | Python script triggered daily via HTTP, uploads CSV to GCS |
+| **Storage (Raw)** | Google Cloud Storage | Bucket name from config.yaml, 90-day retention |
 | **Orchestration** | Eventarc + Cloud Functions | Event-driven trigger for Dataflow jobs |
 | **Processing** | Dataflow (Apache Beam) | Flex Template, auto-scaling 2-5 workers |
 | **Data Warehouse** | BigQuery | 3 datasets: raw, staging, curated |
@@ -169,11 +168,13 @@ A **production-grade, real-time GCP data pipeline** that ingests ICC Men's Batti
 ### Raw Layer (cricket_raw)
 
 **Table: batting_rankings**
-- Partitioned: `DATE(ingested_at)`
-- Clustered: `format`, `country`
-- 90-day retention
-- Exact source schema + metadata fields
+- **Dataset name**: From config.yaml (bigquery.dataset_raw)
+- **Table name**: From variables.tf (bq_raw_table_name, default: batting_rankings)
+- **Schema**: Defined in bigquery/schemas/raw_batting_rankings.json (loaded by terraform)
+- **Partitioned**: `DATE(ingested_at)` with 90-day expiration
+- **Clustered**: `format`, `country`
 
+Schema columns (11 total):
 ```
 rank INT64
 player_id STRING
@@ -188,54 +189,66 @@ ingested_at TIMESTAMP
 source_file STRING
 ```
 
+**Created by**: terraform/bigquery.tf (lines 29-51) + bigquery/schemas/raw_batting_rankings.json
+
 ### Staging Layer (cricket_staging) - Star Schema
 
-**Dimensions:**
-1. **dim_player** — Unique players
+**Dataset name**: From config.yaml (bigquery.dataset_staging)
+
+**Dimensions** (created via SQL scripts with MERGE logic):
+
+1. **dim_player** — Unique players (02_create_dim_player.sql)
    - player_id (PK)
    - player_name
    - country_id (FK)
    - last_updated
+   - SCD Type 1: Updates current attributes only
 
-2. **dim_country** — Cricket-playing nations
+2. **dim_country** — Cricket-playing nations (03_create_dim_country.sql)
    - country_id (PK)
    - country_name
    - icc_code
    - last_updated
 
-3. **dim_format** — Cricket formats (Test, ODI, T20I)
+3. **dim_format** — Cricket formats (04_create_dim_format.sql)
    - format_id (PK): 1=Test, 2=ODI, 3=T20I
    - format_name
    - description
+   - Static lookup table
 
-4. **dim_date** — Time dimension (20 years: 2015-2035)
+4. **dim_date** — Time dimension (05_create_dim_date.sql)
    - date_id (PK)
    - full_date
    - year, quarter, month, week, day
    - day_name, month_name
+   - 7305 rows (2015-01-01 to 2034-12-31)
 
-**Fact Table:**
-- **fact_batting_rankings** — Daily snapshot
+**Fact Table** (06_create_fact_batting.sql):
+- **fact_batting_rankings** — Daily snapshot (Composite Key: YYYYMMDD-player_id-format)
   - player_id FK
   - country_id FK
   - format_id FK
   - date_id FK
-  - rank
-  - rating
-  - points
-  - best_rank
+  - rank, rating, points, best_rank
   - source_file
-  - loaded_at (partition)
+  - loaded_at (partition key)
+  - Clustered by: format_id, country_id
+  - MERGE logic: Idempotent daily updates
 
 ### Curated Layer (cricket_curated) - Analytics Views
 
-| View | Purpose | Key Columns |
-|------|---------|------------|
-| `vw_current_rankings` | Latest standings | player_name, country_name, format_name, current_rank, current_rating |
-| `vw_ranking_trend` | 90-day history | player_name, full_date, rank, rank_change |
-| `vw_top10_by_format` | Top performers | rank_position, player_name, format_name, current_rating |
-| `vw_country_summary` | Country stats | country_name, players_in_top50, avg_rating |
-| `vw_player_format_comparison` | Multi-format analysis | player_name, test_rank, odi_rank, t20i_rank |
+**Dataset name**: From config.yaml (bigquery.dataset_curated)  
+**SQL Location**: bigquery/sql/07_create_curated_views.sql (all 5 views in one file)
+
+| View | Purpose | Key Columns | SQL File |
+|------|---------|------------|----------|
+| `vw_current_rankings` | Latest standings | player_name, country_name, format_name, current_rank, current_rating | 07_*.sql |
+| `vw_ranking_trend` | 90-day history | player_name, full_date, rank, rank_change | 07_*.sql |
+| `vw_top10_by_format` | Top performers | rank_position, player_name, format_name, current_rating | 07_*.sql |
+| `vw_country_summary` | Country stats | country_name, players_in_top50, avg_rating | 07_*.sql |
+| `vw_player_format_comparison` | Multi-format analysis | player_name, test_rank, odi_rank, t20i_rank | 07_*.sql |
+
+**Created by**: terraform/bigquery.tf (lines 157-178) which reads 07_create_curated_views.sql
 
 ---
 

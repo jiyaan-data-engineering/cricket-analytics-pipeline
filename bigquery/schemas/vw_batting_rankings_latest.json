@@ -1,0 +1,56 @@
+[
+  {
+    "name": "player_name",
+    "type": "STRING",
+    "mode": "NULLABLE",
+    "description": "Player's full name"
+  },
+  {
+    "name": "country_name",
+    "type": "STRING",
+    "mode": "NULLABLE",
+    "description": "Country name"
+  },
+  {
+    "name": "format_name",
+    "type": "STRING",
+    "mode": "NULLABLE",
+    "description": "Format name: TEST, ODI, or T20I"
+  },
+  {
+    "name": "format_id",
+    "type": "INTEGER",
+    "mode": "NULLABLE",
+    "description": "Format identifier (1=TEST, 2=ODI, 3=T20I)"
+  },
+  {
+    "name": "current_rank",
+    "type": "INTEGER",
+    "mode": "NULLABLE",
+    "description": "Current ranking"
+  },
+  {
+    "name": "current_rating",
+    "type": "FLOAT64",
+    "mode": "NULLABLE",
+    "description": "Current player rating"
+  },
+  {
+    "name": "current_points",
+    "type": "FLOAT64",
+    "mode": "NULLABLE",
+    "description": "Current total points"
+  },
+  {
+    "name": "best_rank",
+    "type": "INTEGER",
+    "mode": "NULLABLE",
+    "description": "Career best ranking"
+  },
+  {
+    "name": "last_updated",
+    "type": "TIMESTAMP",
+    "mode": "NULLABLE",
+    "description": "Last update timestamp"
+  }
+]

@@ -31,36 +31,51 @@ Looker Studio Dashboard
 ```
 cricket-analytics-pipeline/
 ├── config/
-│   └── config.yaml                    # Configuration (API keys, buckets, datasets)
+│   └── config.yaml                    # Configuration (API keys, buckets, datasets) - SOURCE OF TRUTH
+│
 ├── ingestion/
 │   ├── fetch_batting_rankings.py      # API ingestion script
 │   └── requirements.txt
+│
 ├── cloud_function/
 │   ├── main.py                        # GCS trigger → Dataflow launcher
 │   └── requirements.txt
+│
 ├── dataflow/
 │   ├── pipeline.py                    # Apache Beam Flex Template
 │   ├── Dockerfile                     # Container for Flex Template
 │   └── requirements.txt
+│
 ├── bigquery/
 │   ├── schemas/
-│   │   ├── raw_batting_rankings.json  # BQ schema
-│   │   └── staging_schemas.json
+│   │   └── raw_batting_rankings.json  # BQ schema (SOURCE OF TRUTH for table structure)
 │   └── sql/
-│       ├── 01_create_raw_table.sql
-│       ├── 02_create_dim_player.sql
-│       ├── 03_create_dim_country.sql
-│       ├── 04_create_dim_format.sql
-│       ├── 05_create_dim_date.sql
-│       ├── 06_create_fact_batting.sql
-│       └── 07_create_curated_views.sql
+│       ├── 01_create_raw_table.sql    # Raw layer + vw_latest_raw
+│       ├── 02_create_dim_player.sql   # Staging dimension
+│       ├── 03_create_dim_country.sql  # Staging dimension
+│       ├── 04_create_dim_format.sql   # Staging dimension
+│       ├── 05_create_dim_date.sql     # Staging dimension
+│       ├── 06_create_fact_batting.sql # Staging fact table
+│       └── 07_create_curated_views.sql# Curated layer (5 views)
+│
 ├── terraform/
-│   ├── main.tf                        # GCP infrastructure
-│   ├── variables.tf
-│   ├── outputs.tf
+│   ├── main.tf                        # Core GCP infrastructure (APIs, SAs, Cloud Function, Scheduler, Composer, Monitoring)
+│   ├── gcs.tf                         # GCS buckets (reads from config/config.yaml)
+│   ├── bigquery.tf                    # BigQuery datasets & tables (reads from SQL/schema files)
+│   ├── cloud_composer.tf              # Cloud Composer configuration
+│   ├── variables.tf                   # Configurable variables
+│   ├── outputs.tf                     # Output values
 │   └── terraform.tfvars               # (Create with your values)
-└── README.md
+│
+├── README.md                          # Quick start & overview (THIS FILE)
+└── [Other documentation files]
 ```
+
+**Key Changes from Previous Structure:**
+- `config/config.yaml` is now the **SOURCE OF TRUTH** for bucket and dataset names
+- `terraform/gcs.tf` - NEW file that reads bucket names from config.yaml
+- `terraform/bigquery.tf` - NEW file that reads schemas and SQL from existing files
+- Refactored to **eliminate hardcoding** and **reduce duplication**
 
 ## Prerequisites
 
@@ -174,43 +189,63 @@ gcloud functions deploy cricket-gcs-dataflow-trigger \
 ### Step 6: Build & Push Dataflow Flex Template
 
 ```bash
+# Set variables from config.yaml or terraform.tfvars
+export PROJECT_ID=$(gcloud config get-value project)
+export REGION="us-central1"
+export REGISTRY="${REGION}-docker.pkg.dev"
+
 # Build Docker image
 cd dataflow
 docker build -t cricket-pipeline:latest .
 
-# Tag for Artifact Registry
+# Tag for Artifact Registry (from terraform artifact_registry_name variable)
 docker tag cricket-pipeline:latest \
-  us-central1-docker.pkg.dev/YOUR_PROJECT/cricket-dataflow-templates/batting-pipeline:latest
+  ${REGISTRY}/${PROJECT_ID}/cricket-docker/batting-pipeline:latest
 
 # Configure Docker auth
-gcloud auth configure-docker us-central1-docker.pkg.dev
+gcloud auth configure-docker ${REGISTRY}
 
 # Push to Artifact Registry
-docker push us-central1-docker.pkg.dev/YOUR_PROJECT/cricket-dataflow-templates/batting-pipeline:latest
+docker push ${REGISTRY}/${PROJECT_ID}/cricket-docker/batting-pipeline:latest
 
-# Build Flex Template metadata
+# Build Flex Template metadata (references gcs_templates_bucket_name from config.yaml)
 gcloud dataflow flex-template build \
-  gs://cricket-analytics-dataflow-templates-YOUR_PROJECT/batting-pipeline \
-  --image=us-central1-docker.pkg.dev/YOUR_PROJECT/cricket-dataflow-templates/batting-pipeline:latest \
+  gs://cricket-dataflow-templates/batting-pipeline/metadata \
+  --image=${REGISTRY}/${PROJECT_ID}/cricket-docker/batting-pipeline:latest \
   --sdk-language=PYTHON
 ```
+
+**Note**: Bucket name `cricket-dataflow-templates` comes from `config/config.yaml` (gcs.template_bucket).
 
 ### Step 7: Create BigQuery Tables and Views
 
 ```bash
-# Replace {PROJECT_ID} with your actual GCP project ID
+# Set project ID
+export PROJECT_ID=$(gcloud config get-value project)
+
+# Replace {PROJECT_ID} placeholder in SQL files with actual project ID
 cd bigquery/sql
 
-bq query --use_legacy_sql=false < 01_create_raw_table.sql
-bq query --use_legacy_sql=false < 02_create_dim_player.sql
-bq query --use_legacy_sql=false < 03_create_dim_country.sql
-bq query --use_legacy_sql=false < 04_create_dim_format.sql
-bq query --use_legacy_sql=false < 05_create_dim_date.sql
-bq query --use_legacy_sql=false < 06_create_fact_batting.sql
-bq query --use_legacy_sql=false < 07_create_curated_views.sql
+# Function to run SQL with variable substitution
+run_sql() {
+  local file=$1
+  echo "Running: $file"
+  sed "s/{PROJECT_ID}/${PROJECT_ID}/g" "$file" | bq query --use_legacy_sql=false --project_id=${PROJECT_ID}
+}
+
+# Run all SQL scripts in order
+run_sql 01_create_raw_table.sql
+run_sql 02_create_dim_player.sql
+run_sql 03_create_dim_country.sql
+run_sql 04_create_dim_format.sql
+run_sql 05_create_dim_date.sql
+run_sql 06_create_fact_batting.sql
+run_sql 07_create_curated_views.sql
+
+cd ../..
 ```
 
-Or run them manually in BigQuery Console and replace `{PROJECT_ID}` with your actual project.
+**Note**: SQL files reference the schema from `bigquery/schemas/raw_batting_rankings.json`. Dataset names come from `config/config.yaml`.
 
 ## Testing & Verification
 
@@ -266,22 +301,26 @@ bq query --use_legacy_sql=false \
 
 ## Daily Schedule & Automation
 
-The pipeline runs automatically every day at **06:00 UTC**:
+The pipeline runs automatically every day at **06:00 UTC** (configurable via config.yaml):
 
-1. **Cloud Scheduler** triggers ingestion job
-2. **Ingestion Script** fetches data → uploads CSV to GCS
-3. **GCS Finalized Event** → triggers Cloud Function
-4. **Cloud Function** launches Dataflow Flex Template
-5. **Dataflow Pipeline** reads CSV → validates → writes to BigQuery RAW
-6. **Scheduled Query** transforms RAW → STAGING (star schema)
-7. **Scheduled Query** generates CURATED views
+1. **Cloud Scheduler** triggers ingestion job (schedule from `config.yaml` → `terraform/variables.tf`)
+2. **Ingestion Script** fetches data → uploads CSV to GCS bucket (name from `config.yaml`)
+3. **GCS Finalized Event** → triggers Cloud Function (event-driven)
+4. **Cloud Function** validates file and launches Dataflow Flex Template
+5. **Dataflow Pipeline** reads CSV → validates → writes to BigQuery RAW layer (dataset from `config.yaml`)
+6. **Scheduled Query** transforms RAW → STAGING (star schema, via SQL scripts in `bigquery/sql/`)
+7. **Scheduled Query** generates CURATED views (via SQL scripts)
 8. **Looker Studio** dashboard auto-refreshes (configurable)
 
 To modify schedule, edit `config.yaml`:
 ```yaml
 scheduling:
-  ingestion_schedule: "0 6 * * *"  # Cron format
+  ingestion_schedule: "0 6 * * *"  # Cron format - passed to Cloud Scheduler
 ```
+
+All bucket names and dataset names come from:
+- **Primary source**: `config/config.yaml`
+- **Override source**: `terraform/terraform.tfvars` (optional)
 
 ## Creating the Looker Studio Dashboard
 
@@ -300,22 +339,29 @@ scheduling:
 
 ### RAW Layer
 - **Table**: `cricket_raw.batting_rankings`
-- **Partitioned by**: `DATE(ingested_at)`
+- **Location**: Dataset name from `config.yaml` (bq_raw_dataset) + table from `variables.tf` (bq_raw_table_name)
+- **Schema**: Defined in `bigquery/schemas/raw_batting_rankings.json` (loaded by terraform/bigquery.tf)
+- **Partitioned by**: `DATE(ingested_at)` - 90 days retention
 - **Clustered by**: `format`, `country`
-- **Retention**: 90 days
-- **Columns**: Exact API response + ingestion metadata
+- **Columns**: Exact API response + ingestion metadata (11 columns defined in Terraform)
 
 ### STAGING Layer (Star Schema)
+Created via SQL scripts in `bigquery/sql/02_*.sql` through `06_*.sql`:
+
 **Dimensions:**
-- `dim_player` (player_id, name, country_id)
-- `dim_country` (country_id, name, icc_code)
-- `dim_format` (format_id: 1=Test, 2=ODI, 3=T20I)
-- `dim_date` (daily grain from 2015-2035)
+- `dim_player` - player_id, name, country_id (SCD Type 1, MERGE logic in 02_create_dim_player.sql)
+- `dim_country` - country_id, name, icc_code (created in 03_create_dim_country.sql)
+- `dim_format` - format_id: 1=Test, 2=ODI, 3=T20I (static lookup in 04_create_dim_format.sql)
+- `dim_date` - daily grain from 2015-2035 (7305 rows, created in 05_create_dim_date.sql)
 
 **Facts:**
-- `fact_batting_rankings` (daily snapshot: rank, rating, points, best_rank)
+- `fact_batting_rankings` - daily snapshot (player_id FK, format_id FK, date_id FK, rank, rating, points, best_rank)
+  - Partitioned by: loaded_at
+  - Clustered by: format_id, country_id
+  - Created via 06_create_fact_batting.sql with MERGE logic
 
 ### CURATED Layer (Views)
+All 5 analytics views created via `bigquery/sql/07_create_curated_views.sql`:
 - `vw_current_rankings` - Latest snapshot per player+format
 - `vw_ranking_trend` - Historical progression (90 days)
 - `vw_top10_by_format` - Top 10 players per format

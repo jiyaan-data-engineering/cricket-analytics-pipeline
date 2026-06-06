@@ -1,7 +1,8 @@
 -- Create STAGING layer - Dimension: Date
 -- Generates date dimension for a 10-year period
+-- Note: Dataset names are placeholders - substitute {STAGING_DATASET} with actual dataset name from config
 
-CREATE OR REPLACE TABLE `{PROJECT_ID}.cricket_staging.dim_date` (
+CREATE OR REPLACE TABLE `{PROJECT_ID}.{STAGING_DATASET}.dim_date` (
   date_id INT64 NOT NULL,
   full_date DATE NOT NULL,
   year INT64,
@@ -19,7 +20,7 @@ OPTIONS (
 );
 
 -- Generate dates from 2015 to 2035
-INSERT INTO `{PROJECT_ID}.cricket_staging.dim_date`
+INSERT INTO `{PROJECT_ID}.{STAGING_DATASET}.dim_date`
 SELECT
   CAST(FORMAT_DATE('%Y%m%d', d) AS INT64) as date_id,
   d as full_date,

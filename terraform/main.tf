@@ -1,3 +1,9 @@
+# ============================================================================
+# Terraform Configuration - Cricket Analytics Pipeline
+# Creates complete GCP infrastructure
+# All resource names from variables.tf
+# ============================================================================
+
 terraform {
   required_version = ">= 1.0"
   required_providers {
@@ -13,7 +19,10 @@ provider "google" {
   region  = var.gcp_region
 }
 
-# Enable required APIs
+# ============================================================================
+# ENABLE REQUIRED GCP APIS
+# ============================================================================
+
 resource "google_project_service" "required_apis" {
   for_each = toset([
     "storage.googleapis.com",
@@ -26,299 +35,454 @@ resource "google_project_service" "required_apis" {
     "eventarc.googleapis.com",
     "logging.googleapis.com",
     "compute.googleapis.com",
+    "composer.googleapis.com",
+    "iam.googleapis.com"
   ])
 
   service            = each.value
   disable_on_destroy = false
 }
 
-# Create service account for Dataflow jobs
+# ============================================================================
+# CREATE SERVICE ACCOUNTS
+# ============================================================================
+
+# Dataflow Service Account
 resource "google_service_account" "dataflow_sa" {
-  account_id   = "cricket-dataflow-sa"
-  display_name = "Service Account for Cricket Dataflow Jobs"
+  account_id   = var.dataflow_sa_name
+  display_name = "Cricket Analytics Dataflow Service Account"
+
+  depends_on = [google_project_service.required_apis["iam.googleapis.com"]]
 }
 
-# Grant BigQuery Admin role
+# Cloud Function Service Account
+resource "google_service_account" "cloud_function_sa" {
+  account_id   = var.cloud_function_sa_name
+  display_name = "Cricket Analytics Cloud Function Service Account"
+
+  depends_on = [google_project_service.required_apis["iam.googleapis.com"]]
+}
+
+# Cloud Composer Service Account
+resource "google_service_account" "cloud_composer_sa" {
+  account_id   = var.cloud_composer_sa_name
+  display_name = "Cricket Analytics Cloud Composer Service Account"
+
+  depends_on = [google_project_service.required_apis["iam.googleapis.com"]]
+}
+
+# ============================================================================
+# GRANT IAM ROLES TO SERVICE ACCOUNTS
+# ============================================================================
+
+# Dataflow SA - BigQuery Admin
 resource "google_project_iam_member" "dataflow_bq_admin" {
   project = var.gcp_project_id
   role    = "roles/bigquery.admin"
   member  = "serviceAccount:${google_service_account.dataflow_sa.email}"
 }
 
-# Grant Storage Admin role
+# Dataflow SA - Storage Admin
 resource "google_project_iam_member" "dataflow_storage_admin" {
   project = var.gcp_project_id
   role    = "roles/storage.admin"
   member  = "serviceAccount:${google_service_account.dataflow_sa.email}"
 }
 
-# Grant Dataflow Worker role
+# Dataflow SA - Dataflow Worker
 resource "google_project_iam_member" "dataflow_worker" {
   project = var.gcp_project_id
   role    = "roles/dataflow.worker"
   member  = "serviceAccount:${google_service_account.dataflow_sa.email}"
 }
 
-# ============================================
-# GCS BUCKETS
-# ============================================
-
-resource "google_storage_bucket" "raw_data" {
-  name          = "${var.bucket_prefix}-raw-data-${var.gcp_project_id}"
-  location      = var.gcp_region
-  force_destroy = false
-
-  uniform_bucket_level_access = true
-
-  lifecycle {
-    prevent_destroy = true
-  }
-
-  labels = {
-    environment = var.environment
-    purpose     = "raw-data-landing"
-  }
-}
-
-resource "google_storage_bucket_folder" "batting_folder" {
-  bucket = google_storage_bucket.raw_data.name
-  name   = "batting/"
-}
-
-resource "google_storage_bucket" "dataflow_templates" {
-  name          = "${var.bucket_prefix}-dataflow-templates-${var.gcp_project_id}"
-  location      = var.gcp_region
-  force_destroy = false
-
-  uniform_bucket_level_access = true
-
-  labels = {
-    environment = var.environment
-    purpose     = "dataflow-templates"
-  }
-}
-
-resource "google_storage_bucket" "dataflow_temp" {
-  name          = "${var.bucket_prefix}-dataflow-temp-${var.gcp_project_id}"
-  location      = var.gcp_region
-  force_destroy = true
-
-  uniform_bucket_level_access = true
-
-  lifecycle {
-    ignore_changes = [versioning]
-  }
-
-  labels = {
-    environment = var.environment
-    purpose     = "dataflow-staging"
-  }
-}
-
-# ============================================
-# BigQuery DATASETS
-# ============================================
-
-resource "google_bigquery_dataset" "cricket_raw" {
-  dataset_id    = "cricket_raw"
-  friendly_name = "Cricket Raw Layer"
-  description   = "Raw batting rankings data from Cricbuzz API"
-  location      = var.gcp_region
-
-  default_table_expiration_ms = 7776000000  # 90 days
-
-  labels = {
-    environment = var.environment
-    layer       = "raw"
-  }
-}
-
-resource "google_bigquery_dataset" "cricket_staging" {
-  dataset_id    = "cricket_staging"
-  friendly_name = "Cricket Staging Layer"
-  description   = "Cleaned and transformed data with star schema"
-  location      = var.gcp_region
-
-  labels = {
-    environment = var.environment
-    layer       = "staging"
-  }
-}
-
-resource "google_bigquery_dataset" "cricket_curated" {
-  dataset_id    = "cricket_curated"
-  friendly_name = "Cricket Curated Layer"
-  description   = "Analytics-ready views for dashboards"
-  location      = var.gcp_region
-
-  labels = {
-    environment = var.environment
-    layer       = "curated"
-  }
-}
-
-# ============================================
-# ARTIFACT REGISTRY (for Flex Templates)
-# ============================================
-
-resource "google_artifact_registry_repository" "dataflow_repo" {
-  location      = var.gcp_region
-  repository_id = "cricket-dataflow-templates"
-  description   = "Docker repository for Cricket Dataflow Flex Templates"
-  format        = "DOCKER"
-
-  docker_config {
-    immutable_tags = false
-  }
-}
-
-# ============================================
-# Cloud Run (for scheduled ingestion)
-# ============================================
-
-resource "google_cloud_run_service" "ingestion_service" {
-  name     = "cricket-ingestion-service"
-  location = var.gcp_region
-
-  template {
-    spec {
-      service_account_name = google_service_account.dataflow_sa.email
-
-      containers {
-        image = "gcr.io/cloud-builders/docker"
-        env {
-          name  = "RAPIDAPI_KEY"
-          value = var.rapidapi_key
-        }
-        env {
-          name  = "GCP_PROJECT"
-          value = var.gcp_project_id
-        }
-      }
-    }
-  }
-
-  traffic {
-    percent         = 100
-    latest_revision = true
-  }
-}
-
-# ============================================
-# Cloud Scheduler (daily ingestion trigger)
-# ============================================
-
-resource "google_cloud_scheduler_job" "daily_ingestion" {
-  name             = "cricket-daily-ingestion"
-  description      = "Trigger daily cricket batting rankings ingestion"
-  schedule         = "0 6 * * *"  # 06:00 UTC daily
-  time_zone        = "UTC"
-  attempt_deadline = "600s"
-  region           = var.gcp_region
-
-  retry_config {
-    retry_count = 2
-  }
-
-  http_target {
-    http_method = "POST"
-    uri         = google_cloud_run_service.ingestion_service.status[0].url
-
-    headers = {
-      "Content-Type" = "application/json"
-    }
-  }
-}
-
-# ============================================
-# EVENTARC TRIGGER (GCS → Cloud Function)
-# ============================================
-
-resource "google_service_account" "cloud_function_sa" {
-  account_id   = "cricket-cloud-function-sa"
-  display_name = "Service Account for Cricket Cloud Function"
-}
-
-resource "google_project_iam_member" "cf_dataflow_admin" {
+# Cloud Function SA - Dataflow Admin
+resource "google_project_iam_member" "function_dataflow_admin" {
   project = var.gcp_project_id
   role    = "roles/dataflow.admin"
   member  = "serviceAccount:${google_service_account.cloud_function_sa.email}"
 }
 
-resource "google_project_iam_member" "cf_storage_reader" {
+# Cloud Function SA - Storage Object Viewer
+resource "google_project_iam_member" "function_storage_viewer" {
   project = var.gcp_project_id
   role    = "roles/storage.objectViewer"
   member  = "serviceAccount:${google_service_account.cloud_function_sa.email}"
 }
 
-resource "google_eventarc_trigger" "gcs_to_dataflow" {
-  name            = "cricket-gcs-to-dataflow"
-  location        = var.gcp_region
-  service_account = google_service_account.cloud_function_sa.email
-
-  matching_criteria {
-    attribute = "type"
-    value     = "google.cloud.storage.object.v1.finalized"
-  }
-
-  matching_criteria {
-    attribute = "bucket"
-    value     = google_storage_bucket.raw_data.name
-  }
-
-  destination {
-    cloud_function = google_cloudfunctions2_function.dataflow_trigger.id
-  }
+# Cloud Composer SA - BigQuery Admin
+resource "google_project_iam_member" "composer_bq_admin" {
+  project = var.gcp_project_id
+  role    = "roles/bigquery.admin"
+  member  = "serviceAccount:${google_service_account.cloud_composer_sa.email}"
 }
 
-# ============================================
+# Cloud Composer SA - Dataflow Admin
+resource "google_project_iam_member" "composer_dataflow_admin" {
+  project = var.gcp_project_id
+  role    = "roles/dataflow.admin"
+  member  = "serviceAccount:${google_service_account.cloud_composer_sa.email}"
+}
+
+# Cloud Composer SA - Storage Admin
+resource "google_project_iam_member" "composer_storage_admin" {
+  project = var.gcp_project_id
+  role    = "roles/storage.admin"
+  member  = "serviceAccount:${google_service_account.cloud_composer_sa.email}"
+}
+
+# ============================================================================
+# GCS BUCKETS
+# NOTE: GCS bucket definitions have been moved to gcs.tf
+# All bucket names and configurations are now sourced from:
+#   - config/config.yaml (source of truth)
+#   - variables.tf (terraform overrides via terraform.tfvars)
+# ============================================================================
+# See gcs.tf for all GCS bucket resources
+# They reference config/config.yaml for bucket names and settings
+
+# ============================================================================
+# CREATE BIGQUERY DATASETS
+# ============================================================================
+
+# Raw Dataset
+resource "google_bigquery_dataset" "raw" {
+  dataset_id    = var.bq_raw_dataset
+  friendly_name = "Cricket Raw Data"
+  description   = "Raw cricket data layer - exact copy from API"
+  location      = var.gcp_region
+
+  default_table_expiration_ms = var.bq_table_expiration_days * 24 * 60 * 60 * 1000
+
+  labels = var.labels
+
+  depends_on = [google_project_service.required_apis["bigquery.googleapis.com"]]
+}
+
+# Staging Dataset
+resource "google_bigquery_dataset" "staging" {
+  dataset_id    = var.bq_staging_dataset
+  friendly_name = "Cricket Staging Data"
+  description   = "Staging layer with star schema and dimension tables"
+  location      = var.gcp_region
+
+  labels = var.labels
+
+  depends_on = [google_project_service.required_apis["bigquery.googleapis.com"]]
+}
+
+# Curated Dataset
+resource "google_bigquery_dataset" "curated" {
+  dataset_id    = var.bq_curated_dataset
+  friendly_name = "Cricket Curated Analytics"
+  description   = "Curated analytics layer with pre-joined views"
+  location      = var.gcp_region
+
+  labels = var.labels
+
+  depends_on = [google_project_service.required_apis["bigquery.googleapis.com"]]
+}
+
+# ============================================================================
+# CREATE BIGQUERY TABLES
+# ============================================================================
+
+# Raw Batting Rankings Table
+resource "google_bigquery_table" "raw_batting_rankings" {
+  dataset_id = google_bigquery_dataset.raw.dataset_id
+  table_id   = var.bq_raw_table_name
+
+  description = "Raw ICC Men's Batting Rankings"
+  labels      = var.labels
+
+  time_partitioning {
+    type  = "DAY"
+    field = "ingested_at"
+  }
+
+  clustering = ["format", "country"]
+
+  schema = jsonencode([
+    {
+      name        = "rank"
+      type        = "INTEGER"
+      mode        = "NULLABLE"
+      description = "Current ranking"
+    },
+    {
+      name        = "player_id"
+      type        = "STRING"
+      mode        = "NULLABLE"
+      description = "Unique player identifier"
+    },
+    {
+      name        = "player_name"
+      type        = "STRING"
+      mode        = "NULLABLE"
+      description = "Player's full name"
+    },
+    {
+      name        = "country"
+      type        = "STRING"
+      mode        = "NULLABLE"
+      description = "Country name"
+    },
+    {
+      name        = "country_id"
+      type        = "STRING"
+      mode        = "NULLABLE"
+      description = "Country identifier"
+    },
+    {
+      name        = "rating"
+      type        = "FLOAT64"
+      mode        = "NULLABLE"
+      description = "Player rating"
+    },
+    {
+      name        = "points"
+      type        = "FLOAT64"
+      mode        = "NULLABLE"
+      description = "Total points"
+    },
+    {
+      name        = "best_rank"
+      type        = "INTEGER"
+      mode        = "NULLABLE"
+      description = "Career best rank"
+    },
+    {
+      name        = "format"
+      type        = "STRING"
+      mode        = "NULLABLE"
+      description = "Format (TEST/ODI/T20I)"
+    },
+    {
+      name        = "ingested_at"
+      type        = "TIMESTAMP"
+      mode        = "NULLABLE"
+      description = "Ingestion timestamp"
+    },
+    {
+      name        = "source_file"
+      type        = "STRING"
+      mode        = "NULLABLE"
+      description = "Source GCS file path"
+    }
+  ])
+
+  depends_on = [google_bigquery_dataset.raw]
+}
+
+# ============================================================================
+# CREATE ARTIFACT REGISTRY
+# ============================================================================
+
+resource "google_artifact_registry_repository" "docker_repo" {
+  location      = var.gcp_region
+  repository_id = var.artifact_registry_name
+  description   = "Docker repository for Cricket Analytics Dataflow templates"
+  format        = var.artifact_registry_format
+
+  labels = var.labels
+
+  depends_on = [google_project_service.required_apis["artifactregistry.googleapis.com"]]
+}
+
+# ============================================================================
+# CREATE CLOUD FUNCTION (GCS Trigger)
+# ============================================================================
+
+# Create Cloud Function source code bucket (temporary)
+resource "google_storage_bucket" "cloud_function_source" {
+  name          = "${var.gcp_project_id}-cloud-function-source"
+  location      = var.gcp_region
+  force_destroy = true
+
+  labels = var.labels
+
+  depends_on = [google_project_service.required_apis["storage.googleapis.com"]]
+}
+
+# Upload placeholder Cloud Function source
+resource "google_storage_bucket_object" "function_source" {
+  name   = "cricket-function-source.zip"
+  bucket = google_storage_bucket.cloud_function_source.name
+  source = null # In real deployment, provide actual source zip
+
+  # NOTE: Replace this with actual Cloud Function source code
+  # See cloud_function/main.py for the actual function
+}
+
 # Cloud Function 2nd Gen
-# ============================================
+resource "google_cloudfunctions2_function" "gcs_dataflow_trigger" {
+  name        = var.cloud_function_name
+  location    = var.gcp_region
+  description = "Trigger Dataflow job when CSV is uploaded to GCS"
 
-resource "google_cloudfunctions2_function" "dataflow_trigger" {
-  name            = "cricket-gcs-dataflow-trigger"
-  location        = var.gcp_region
-  description     = "Triggered by GCS finalization, launches Dataflow job"
+  labels = var.labels
+
   build_config {
-    runtime     = "python311"
-    entry_point = "process_batting_file"
-
+    runtime           = var.cloud_function_runtime
+    entry_point       = "process_batting_file"
     source {
       storage_source {
-        bucket = google_storage_bucket.dataflow_templates.name
-        object = "cloud-function-source.zip"
+        bucket = google_storage_bucket.cloud_function_source.name
+        object = google_storage_bucket_object.function_source.name
       }
     }
   }
 
   service_config {
-    max_instance_count = 10
-    timeout_seconds    = 600
-    environment_variables = {
-      GCP_PROJECT                  = var.gcp_project_id
-      GCP_REGION                   = var.gcp_region
-      DATAFLOW_TEMPLATE_LOCATION   = "${google_artifact_registry_repository.dataflow_repo.repository_url}/batting-pipeline"
-      BQ_DATASET                   = "cricket_raw"
-      BQ_TABLE                     = "batting_rankings"
-      DATAFLOW_TEMP_LOCATION       = "gs://${google_storage_bucket.dataflow_temp.name}/temp"
-    }
+    max_instance_count  = var.cloud_function_max_instances
+    timeout_seconds     = var.cloud_function_timeout
+    available_memory_mb = var.cloud_function_memory
+
     service_account_email = google_service_account.cloud_function_sa.email
+
+    environment_variables = {
+      GCP_PROJECT                = var.gcp_project_id
+      GCP_REGION                 = var.gcp_region
+      DATAFLOW_TEMPLATE_LOCATION = var.dataflow_template_location
+      BQ_DATASET                 = var.bq_raw_dataset
+      BQ_TABLE                   = var.bq_raw_table_name
+      TEMP_BUCKET                = google_storage_bucket.dataflow_temp.name  # From gcs.tf
+    }
   }
+
+  event_trigger {
+    event_type           = "google.cloud.storage.object.v1.finalized"
+    service_account_email = google_service_account.cloud_function_sa.email
+
+    event_filters {
+      attribute = "bucket"
+      value     = google_storage_bucket.raw_data.name  # From gcs.tf
+    }
+
+    event_filters {
+      attribute = "name"
+      value     = "${var.gcs_raw_prefix}.*\\.csv$"
+    }
+  }
+
+  depends_on = [
+    google_project_service.required_apis["cloudfunctions.googleapis.com"],
+    google_storage_bucket_object.function_source
+  ]
 }
 
-# ============================================
-# SCHEDULED QUERIES (for staging → curated)
-# ============================================
+# ============================================================================
+# CREATE CLOUD SCHEDULER JOB
+# ============================================================================
 
-resource "google_bigquery_data_transfer_config" "staging_to_curated" {
-  display_name           = "Cricket Staging to Curated Daily"
-  data_source_id         = "scheduled_query"
-  destination_dataset_id = "cricket_curated"
-  location               = var.gcp_region
-  schedule               = "every day 08:00"
-  service_account_name   = google_service_account.dataflow_sa.email
+resource "google_cloud_scheduler_job" "daily_ingestion" {
+  name            = var.cloud_scheduler_job_name
+  description     = var.cloud_scheduler_description
+  schedule        = var.cloud_scheduler_schedule
+  time_zone       = var.cloud_scheduler_timezone
+  region          = var.gcp_region
+  attempt_deadline = "320s"
 
-  params = {
-    query = file("${path.module}/../bigquery/sql/07_create_curated_views.sql")
+  labels = var.labels
+
+  http_target {
+    http_method = "POST"
+    uri         = "https://${var.gcp_region}-${var.gcp_project_id}.cloudfunctions.net/${var.cloud_function_name}"
+
+    oidc_token {
+      service_account_email = google_service_account.cloud_function_sa.email
+    }
   }
+
+  depends_on = [
+    google_project_service.required_apis["cloudscheduler.googleapis.com"],
+    google_cloudfunctions2_function.gcs_dataflow_trigger
+  ]
+}
+
+# ============================================================================
+# CREATE CLOUD COMPOSER (AIRFLOW)
+# ============================================================================
+
+resource "google_composer_environment" "cricket_composer" {
+  count = var.enable_cloud_composer ? 1 : 0
+
+  name        = var.cloud_composer_name
+  region      = var.gcp_region
+  description = "Airflow environment for Cricket Analytics Pipeline"
+  labels      = var.labels
+
+  config {
+    software_config {
+      airflow_config_overrides = {
+        "core-load_examples" = "False"
+      }
+
+      pypi_packages = {
+        "apache-airflow-providers-google"       = ">=10.0.0"
+        "apache-airflow-providers-apache-beam"  = ">=5.0.0"
+        "google-cloud-storage"                  = ">=2.10.0"
+        "google-cloud-bigquery"                 = ">=3.10.0"
+        "pandas"                                = ">=2.0.0"
+        "pyyaml"                                = ">=6.0"
+        "requests"                              = ">=2.31.0"
+      }
+
+      env_variables = {
+        GCP_PROJECT     = var.gcp_project_id
+        GCP_REGION      = var.gcp_region
+        RAW_DATASET     = var.bq_raw_dataset
+        STAGING_DATASET = var.bq_staging_dataset
+        CURATED_DATASET = var.bq_curated_dataset
+        RAW_BUCKET      = google_storage_bucket.raw_data.name  # From gcs.tf
+      }
+    }
+
+    node_config {
+      zone         = var.gcp_zone
+      machine_type = var.cloud_composer_machine_type
+      disk_size_gb = var.cloud_composer_disk_size
+    }
+
+    node_count = var.cloud_composer_node_count
+  }
+
+  depends_on = [google_project_service.required_apis["composer.googleapis.com"]]
+}
+
+# ============================================================================
+# OPTIONAL: MONITORING & ALERTS
+# ============================================================================
+
+resource "google_monitoring_alert_policy" "dag_failure" {
+  count = var.enable_monitoring ? 1 : 0
+
+  display_name = var.alert_policy_name
+  combiner     = "OR"
+  enabled      = true
+
+  conditions {
+    display_name = "DAG Task Failure"
+
+    condition_threshold {
+      filter          = "resource.type=\"cloud_composer_environment\" AND metric.type=\"composer.googleapis.com/dag_run/failed\""
+      duration        = "300s"
+      comparison      = "COMPARISON_GT"
+      threshold_value = 0
+    }
+  }
+
+  depends_on = [google_project_service.required_apis["monitoring.googleapis.com"]]
+}
+
+# ============================================================================
+# LOCAL VALUES FOR EASY REFERENCE
+# ============================================================================
+
+locals {
+  dataflow_sa_email     = google_service_account.dataflow_sa.email
+  function_sa_email     = google_service_account.cloud_function_sa.email
+  composer_sa_email     = google_service_account.cloud_composer_sa.email
+  raw_bucket_name       = google_storage_bucket.raw_data.name        # From gcs.tf
+  templates_bucket_name = google_storage_bucket.dataflow_templates.name  # From gcs.tf
 }

@@ -1,0 +1,50 @@
+[
+  {
+    "name": "rank",
+    "type": "INTEGER",
+    "mode": "NULLABLE",
+    "description": "Player's current ranking"
+  },
+  {
+    "name": "player_id",
+    "type": "STRING",
+    "mode": "NULLABLE",
+    "description": "Unique player identifier"
+  },
+  {
+    "name": "player_name",
+    "type": "STRING",
+    "mode": "NULLABLE",
+    "description": "Player's full name"
+  },
+  {
+    "name": "country",
+    "type": "STRING",
+    "mode": "NULLABLE",
+    "description": "Player's country"
+  },
+  {
+    "name": "rating",
+    "type": "FLOAT64",
+    "mode": "NULLABLE",
+    "description": "ICC rating/points for the player"
+  },
+  {
+    "name": "format",
+    "type": "STRING",
+    "mode": "NULLABLE",
+    "description": "Cricket format: Test, ODI, or T20I"
+  },
+  {
+    "name": "ingestion_date",
+    "type": "DATE",
+    "mode": "NULLABLE",
+    "description": "Date of ingestion"
+  },
+  {
+    "name": "rn",
+    "type": "INTEGER",
+    "mode": "NULLABLE",
+    "description": "Row number within partition (latest 100 per format per day)"
+  }
+]

@@ -1,0 +1,26 @@
+[
+  {
+    "name": "player_id",
+    "type": "STRING",
+    "mode": "REQUIRED",
+    "description": "Unique player identifier (Primary Key)"
+  },
+  {
+    "name": "player_name",
+    "type": "STRING",
+    "mode": "NULLABLE",
+    "description": "Player's full name"
+  },
+  {
+    "name": "country_id",
+    "type": "STRING",
+    "mode": "NULLABLE",
+    "description": "Foreign key to dim_country"
+  },
+  {
+    "name": "last_updated",
+    "type": "TIMESTAMP",
+    "mode": "REQUIRED",
+    "description": "Last update timestamp (SCD Type 1)"
+  }
+]

@@ -1,0 +1,50 @@
+[
+  {
+    "name": "country_name",
+    "type": "STRING",
+    "mode": "NULLABLE",
+    "description": "Country name"
+  },
+  {
+    "name": "format_name",
+    "type": "STRING",
+    "mode": "NULLABLE",
+    "description": "Format name: TEST, ODI, or T20I"
+  },
+  {
+    "name": "players_in_top50",
+    "type": "INTEGER",
+    "mode": "NULLABLE",
+    "description": "Number of players from this country in top 50"
+  },
+  {
+    "name": "players_in_top10",
+    "type": "INTEGER",
+    "mode": "NULLABLE",
+    "description": "Number of players from this country in top 10"
+  },
+  {
+    "name": "avg_rating",
+    "type": "FLOAT64",
+    "mode": "NULLABLE",
+    "description": "Average rating of players in top 50"
+  },
+  {
+    "name": "min_rating",
+    "type": "FLOAT64",
+    "mode": "NULLABLE",
+    "description": "Minimum rating of players in top 50"
+  },
+  {
+    "name": "max_rating",
+    "type": "FLOAT64",
+    "mode": "NULLABLE",
+    "description": "Maximum rating of players in top 50"
+  },
+  {
+    "name": "last_updated",
+    "type": "TIMESTAMP",
+    "mode": "NULLABLE",
+    "description": "Last update timestamp"
+  }
+]

@@ -1,0 +1,56 @@
+[
+  {
+    "name": "player_name",
+    "type": "STRING",
+    "mode": "NULLABLE",
+    "description": "Player's full name"
+  },
+  {
+    "name": "country_name",
+    "type": "STRING",
+    "mode": "NULLABLE",
+    "description": "Country name"
+  },
+  {
+    "name": "test_rank",
+    "type": "INTEGER",
+    "mode": "NULLABLE",
+    "description": "Ranking in TEST cricket"
+  },
+  {
+    "name": "test_rating",
+    "type": "FLOAT64",
+    "mode": "NULLABLE",
+    "description": "Rating in TEST cricket"
+  },
+  {
+    "name": "odi_rank",
+    "type": "INTEGER",
+    "mode": "NULLABLE",
+    "description": "Ranking in ODI cricket"
+  },
+  {
+    "name": "odi_rating",
+    "type": "FLOAT64",
+    "mode": "NULLABLE",
+    "description": "Rating in ODI cricket"
+  },
+  {
+    "name": "t20i_rank",
+    "type": "INTEGER",
+    "mode": "NULLABLE",
+    "description": "Ranking in T20I cricket"
+  },
+  {
+    "name": "t20i_rating",
+    "type": "FLOAT64",
+    "mode": "NULLABLE",
+    "description": "Rating in T20I cricket"
+  },
+  {
+    "name": "last_updated",
+    "type": "TIMESTAMP",
+    "mode": "NULLABLE",
+    "description": "Last update timestamp"
+  }
+]

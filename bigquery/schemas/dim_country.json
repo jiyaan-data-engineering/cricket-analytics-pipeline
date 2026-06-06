@@ -1,0 +1,26 @@
+[
+  {
+    "name": "country_id",
+    "type": "STRING",
+    "mode": "REQUIRED",
+    "description": "Unique country identifier (Primary Key)"
+  },
+  {
+    "name": "country_name",
+    "type": "STRING",
+    "mode": "NULLABLE",
+    "description": "Country name"
+  },
+  {
+    "name": "icc_code",
+    "type": "STRING",
+    "mode": "NULLABLE",
+    "description": "ICC country code (e.g., IND, AUS, PAK, ENG, RSA, WI, NZ, SL, BAN, AFG, UNK)"
+  },
+  {
+    "name": "last_updated",
+    "type": "TIMESTAMP",
+    "mode": "NULLABLE",
+    "description": "Last update timestamp"
+  }
+]

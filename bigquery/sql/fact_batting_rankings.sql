@@ -1,7 +1,8 @@
 -- Create STAGING layer - Fact: Batting Rankings
 -- Daily snapshot of batting rankings
+-- Note: Dataset names are placeholders - substitute {RAW_DATASET} and {STAGING_DATASET} with actual names from config
 
-CREATE OR REPLACE TABLE `{PROJECT_ID}.cricket_staging.fact_batting_rankings` (
+CREATE OR REPLACE TABLE `{PROJECT_ID}.{STAGING_DATASET}.fact_batting_rankings` (
   fact_id STRING NOT NULL,
   player_id STRING NOT NULL,
   country_id STRING,
@@ -24,7 +25,7 @@ OPTIONS (
 
 -- Merge logic to populate fact table from raw data
 -- This scheduled query runs daily after raw data is loaded
-MERGE `{PROJECT_ID}.cricket_staging.fact_batting_rankings` T
+MERGE `{PROJECT_ID}.{STAGING_DATASET}.fact_batting_rankings` T
 USING (
   SELECT
     CONCAT(
@@ -52,7 +53,7 @@ USING (
     raw.best_rank,
     raw.source_file,
     CURRENT_TIMESTAMP() as loaded_at
-  FROM `{PROJECT_ID}.cricket_raw.batting_rankings` raw
+  FROM `{PROJECT_ID}.{RAW_DATASET}.batting_rankings` raw
   WHERE DATE(raw.ingested_at) = CURRENT_DATE()
 ) S
 ON T.fact_id = S.fact_id AND T.player_id = S.player_id

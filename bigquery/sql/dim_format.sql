@@ -1,6 +1,7 @@
 -- Create STAGING layer - Dimension: Format
+-- Note: Dataset names are placeholders - substitute {STAGING_DATASET} with actual dataset name from config
 
-CREATE OR REPLACE TABLE `{PROJECT_ID}.cricket_staging.dim_format` (
+CREATE OR REPLACE TABLE `{PROJECT_ID}.{STAGING_DATASET}.dim_format` (
   format_id INT64 NOT NULL,
   format_name STRING NOT NULL,
   description STRING,
@@ -11,7 +12,7 @@ OPTIONS (
 );
 
 -- Insert format values
-INSERT INTO `{PROJECT_ID}.cricket_staging.dim_format`
+INSERT INTO `{PROJECT_ID}.{STAGING_DATASET}.dim_format`
   (format_id, format_name, description)
 VALUES
   (1, 'TEST', 'Test Cricket'),

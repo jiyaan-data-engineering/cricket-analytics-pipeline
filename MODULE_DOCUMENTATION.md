@@ -29,20 +29,20 @@ Central configuration file used by all Python components. Eliminates hardcoding 
 
 ```yaml
 gcp:
-  project_id: "YOUR_GCP_PROJECT_ID"
+  project_id: "cricket-analytics-project"
   region: "us-central1"
-  zone: "us-central1-a"
 
 gcs:
-  raw_data_bucket: "cricket-raw-data"
-  templates_bucket: "cricket-dataflow-templates"
+  raw_bucket: "cricket-raw-data"          # Used by terraform/gcs.tf
+  raw_prefix: "batting/"                   # Used by terraform/gcs.tf
+  template_bucket: "cricket-dataflow-templates"
   temp_bucket: "cricket-dataflow-temp"
 
 bigquery:
-  raw_dataset: "cricket_raw"
-  staging_dataset: "cricket_staging"
-  curated_dataset: "cricket_curated"
-  table_expiration_days: 90
+  dataset_raw: "cricket_raw"              # Used by terraform/bigquery.tf
+  dataset_staging: "cricket_staging"
+  dataset_curated: "cricket_curated"
+  table_raw_batting: "batting_rankings"
 
 api:
   base_url: "https://cricbuzz-cricket.p.rapidapi.com"
@@ -75,9 +75,11 @@ with open('config/config.yaml', 'r') as f:
     config = yaml.safe_load(f)
 
 project_id = config['gcp']['project_id']
-raw_bucket = config['gcs']['raw_data_bucket']
-api_key = config['api']['api_key']
-formats = config['api']['formats']  # ['test', 'odi', 't20i']
+raw_bucket = config['gcs']['raw_bucket']      # Source of truth for bucket name
+raw_prefix = config['gcs']['raw_prefix']      # Source of truth for prefix
+raw_dataset = config['bigquery']['dataset_raw']  # Source of truth for dataset
+api_key = config['apis']['rapidapi']['api_key']
+formats = config['apis']['formats']  # ['test', 'odi', 't20i']
 ```
 
 ### Environment Variable Override

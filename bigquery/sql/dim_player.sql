@@ -1,7 +1,8 @@
 -- Create STAGING layer - Dimension: Player
 -- Slowly Changing Dimension Type 1 (current attributes only)
+-- Note: Dataset names are placeholders - substitute {RAW_DATASET} and {STAGING_DATASET} with actual names from config
 
-CREATE OR REPLACE TABLE `{PROJECT_ID}.cricket_staging.dim_player` (
+CREATE OR REPLACE TABLE `{PROJECT_ID}.{STAGING_DATASET}.dim_player` (
   player_id STRING NOT NULL,
   player_name STRING,
   country_id STRING,
@@ -16,14 +17,14 @@ OPTIONS (
 
 -- Merge logic to upsert player data
 -- This would be called daily via scheduled query after Dataflow loads raw data
-MERGE `{PROJECT_ID}.cricket_staging.dim_player` T
+MERGE `{PROJECT_ID}.{STAGING_DATASET}.dim_player` T
 USING (
   SELECT DISTINCT
     player_id,
     MAX(player_name) as player_name,
     MAX(country_id) as country_id,
     CURRENT_TIMESTAMP() as last_updated
-  FROM `{PROJECT_ID}.cricket_raw.batting_rankings`
+  FROM `{PROJECT_ID}.{RAW_DATASET}.batting_rankings`
   WHERE player_id IS NOT NULL
   GROUP BY player_id
 ) S

@@ -1,0 +1,62 @@
+[
+  {
+    "name": "date_id",
+    "type": "INTEGER",
+    "mode": "REQUIRED",
+    "description": "Date identifier as YYYYMMDD format (Primary Key)"
+  },
+  {
+    "name": "full_date",
+    "type": "DATE",
+    "mode": "REQUIRED",
+    "description": "Full date value"
+  },
+  {
+    "name": "year",
+    "type": "INTEGER",
+    "mode": "NULLABLE",
+    "description": "Year (e.g., 2015, 2026)"
+  },
+  {
+    "name": "quarter",
+    "type": "INTEGER",
+    "mode": "NULLABLE",
+    "description": "Quarter number (1, 2, 3, 4)"
+  },
+  {
+    "name": "month",
+    "type": "INTEGER",
+    "mode": "NULLABLE",
+    "description": "Month number (1-12)"
+  },
+  {
+    "name": "day",
+    "type": "INTEGER",
+    "mode": "NULLABLE",
+    "description": "Day of month (1-31)"
+  },
+  {
+    "name": "week",
+    "type": "INTEGER",
+    "mode": "NULLABLE",
+    "description": "Week number of year"
+  },
+  {
+    "name": "day_of_week",
+    "type": "INTEGER",
+    "mode": "NULLABLE",
+    "description": "Day of week (1-7, where 1=Sunday)"
+  },
+  {
+    "name": "day_name",
+    "type": "STRING",
+    "mode": "NULLABLE",
+    "description": "Day name (Monday, Tuesday, Wednesday, etc.)"
+  },
+  {
+    "name": "month_name",
+    "type": "STRING",
+    "mode": "NULLABLE",
+    "description": "Month name (January, February, March, etc.)"
+  }
+]

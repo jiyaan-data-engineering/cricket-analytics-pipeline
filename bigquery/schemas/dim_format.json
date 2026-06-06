@@ -1,0 +1,20 @@
+[
+  {
+    "name": "format_id",
+    "type": "INTEGER",
+    "mode": "REQUIRED",
+    "description": "Format identifier (Primary Key): 1=TEST, 2=ODI, 3=T20I"
+  },
+  {
+    "name": "format_name",
+    "type": "STRING",
+    "mode": "REQUIRED",
+    "description": "Format name: TEST, ODI, or T20I"
+  },
+  {
+    "name": "description",
+    "type": "STRING",
+    "mode": "NULLABLE",
+    "description": "Format description (e.g., 'Test Cricket', 'One Day International', 'Twenty20 International')"
+  }
+]

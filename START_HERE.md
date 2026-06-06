@@ -221,9 +221,12 @@ cricket-analytics-pipeline/
 │       └── 07_create_curated_views.sql
 │
 ├── terraform/
-│   ├── main.tf                        (Infrastructure)
-│   ├── variables.tf
-│   └── outputs.tf
+│   ├── main.tf                        (Core GCP infrastructure)
+│   ├── gcs.tf                         (GCS buckets - reads config.yaml)
+│   ├── bigquery.tf                    (BigQuery - reads SQL/schema files)
+│   ├── cloud_composer.tf              (Airflow environment)
+│   ├── variables.tf                   (Configurable variables)
+│   └── outputs.tf                     (Output values)
 │
 └── deploy.sh                          (Automation)
 ```

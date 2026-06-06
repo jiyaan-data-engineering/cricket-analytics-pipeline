@@ -184,7 +184,7 @@ bq query --use_legacy_sql=false \
 ## 🔍 File Structure
 
 ```
-P1/
+cricket-analytics-pipeline/
 ├── README.md                          ← Quick start
 ├── DEPLOYMENT.md                      ← Detailed setup
 ├── ARCHITECTURE.md                    ← Design document

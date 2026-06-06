@@ -20,8 +20,10 @@ apis:
   rapidapi:
     base_url: "https://cricbuzz-cricket.p.rapidapi.com"
     endpoint: "/stats/v1/rankings/batsmen"
-    api_key: "${RAPIDAPI_KEY}"  # Set as environment variable
+    api_key: "68711780e9msh5801f4e4a2e884fp161186jsnbe9a5031365d"
     host: "cricbuzz-cricket.p.rapidapi.com"
+    rank_type: "batsmen"
+    request_timeout: 30
 
   formats:
     - test

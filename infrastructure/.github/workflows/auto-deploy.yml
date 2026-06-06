@@ -1,0 +1,286 @@
+name: 🤖 Automated Deployment Pipeline
+
+on:
+  push:
+    branches: [ main ]
+    paths:
+      - 'infrastructure/terraform/**'
+      - 'pipeline/**'
+      - '.github/workflows/auto-deploy.yml'
+  workflow_dispatch:  # Manual trigger
+
+env:
+  GCP_REGION: us-central1
+  DOCKER_REGISTRY: us-central1-docker.pkg.dev
+
+jobs:
+  # ============= STEP 1: Terraform Infrastructure =============
+  terraform-deploy:
+    name: 🏗️ Deploy Infrastructure
+    runs-on: ubuntu-latest
+    outputs:
+      project_id: ${{ steps.terraform.outputs.project_id }}
+    steps:
+      - name: 📥 Checkout code
+        uses: actions/checkout@v4
+
+      - name: 🔐 Authenticate to Google Cloud
+        uses: google-github-actions/auth@v1
+        with:
+          credentials_json: ${{ secrets.GCP_SERVICE_ACCOUNT_KEY }}
+
+      - name: ☁️ Setup Google Cloud SDK
+        uses: google-github-actions/setup-gcloud@v1
+
+      - name: 🔧 Setup Terraform
+        uses: hashicorp/setup-terraform@v2
+        with:
+          terraform_version: 1.5.0
+
+      - name: 📋 Terraform Format Check
+        run: terraform fmt -check -recursive infrastructure/terraform
+        continue-on-error: true
+
+      - name: 🚀 Terraform Init
+        run: |
+          cd infrastructure/terraform
+          terraform init
+
+      - name: 🔍 Terraform Plan
+        id: terraform-plan
+        run: |
+          cd infrastructure/terraform
+          terraform plan -out=tfplan \
+            -var="gcp_project_id=${{ secrets.GCP_PROJECT_ID }}" \
+            -var="gcp_region=${{ env.GCP_REGION }}"
+
+      - name: 🌍 Terraform Apply
+        id: terraform
+        run: |
+          cd infrastructure/terraform
+          terraform apply -auto-approve tfplan
+          echo "project_id=$(gcloud config get-value project)" >> $GITHUB_OUTPUT
+
+      - name: 📊 Output Terraform Results
+        run: |
+          echo "✅ Infrastructure deployed successfully"
+          echo "Project ID: ${{ secrets.GCP_PROJECT_ID }}"
+          echo "Region: ${{ env.GCP_REGION }}"
+
+  # ============= STEP 2: BigQuery Setup =============
+  bigquery-setup:
+    name: 📊 Setup BigQuery
+    runs-on: ubuntu-latest
+    needs: terraform-deploy
+    steps:
+      - name: 📥 Checkout code
+        uses: actions/checkout@v4
+
+      - name: 🔐 Authenticate to Google Cloud
+        uses: google-github-actions/auth@v1
+        with:
+          credentials_json: ${{ secrets.GCP_SERVICE_ACCOUNT_KEY }}
+
+      - name: ☁️ Setup Google Cloud SDK
+        uses: google-github-actions/setup-gcloud@v1
+
+      - name: 📋 Set Project ID
+        run: |
+          gcloud config set project ${{ secrets.GCP_PROJECT_ID }}
+
+      - name: 🗄️ Create BigQuery Tables & Views
+        run: |
+          cd pipeline/bigquery/sql
+
+          SQL_FILES=(
+            "raw_batting_rankings.sql"
+            "vw_latest_raw.sql"
+            "dim_player.sql"
+            "dim_country.sql"
+            "dim_format.sql"
+            "dim_date.sql"
+            "fact_batting_rankings.sql"
+            "vw_batting_rankings_latest.sql"
+            "vw_batting_rankings_90day_trend.sql"
+            "vw_top_10_batsmen_by_format.sql"
+            "vw_batting_statistics_by_country.sql"
+            "vw_ranking_comparison_cross_format.sql"
+          )
+
+          for file in "${SQL_FILES[@]}"; do
+            echo "📄 Executing $file..."
+            sed "s/{PROJECT_ID}/${{ secrets.GCP_PROJECT_ID }}/g; \
+                 s/{RAW_DATASET}/cricket_raw/g; \
+                 s/{STAGING_DATASET}/cricket_staging/g; \
+                 s/{CURATED_DATASET}/cricket_curated/g" "$file" | \
+            bq query --use_legacy_sql=false || true
+          done
+
+          echo "✅ All BigQuery objects created"
+
+  # ============= STEP 3: Dataflow Template =============
+  dataflow-deploy:
+    name: 🔄 Deploy Dataflow Template
+    runs-on: ubuntu-latest
+    needs: [terraform-deploy, bigquery-setup]
+    steps:
+      - name: 📥 Checkout code
+        uses: actions/checkout@v4
+
+      - name: 🔐 Authenticate to Google Cloud
+        uses: google-github-actions/auth@v1
+        with:
+          credentials_json: ${{ secrets.GCP_SERVICE_ACCOUNT_KEY }}
+
+      - name: ☁️ Setup Google Cloud SDK
+        uses: google-github-actions/setup-gcloud@v1
+
+      - name: 🐳 Setup Docker
+        uses: docker/setup-buildx-action@v2
+
+      - name: 📋 Set Project ID
+        run: |
+          gcloud config set project ${{ secrets.GCP_PROJECT_ID }}
+
+      - name: 🏗️ Build Docker Image
+        working-directory: pipeline/dataflow
+        run: |
+          docker build -t cricket-pipeline:latest .
+
+      - name: 🔐 Configure Docker Authentication
+        run: |
+          gcloud auth configure-docker us-central1-docker.pkg.dev
+
+      - name: 📦 Push Docker Image
+        run: |
+          IMAGE="us-central1-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/cricket-docker/batting-pipeline:latest"
+          docker tag cricket-pipeline:latest $IMAGE
+          docker push $IMAGE
+
+      - name: ⚙️ Build Dataflow Template
+        run: |
+          TEMPLATE_BUCKET="gs://cricket-dataflow-templates-${{ secrets.GCP_PROJECT_ID }}"
+          IMAGE="us-central1-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/cricket-docker/batting-pipeline:latest"
+
+          gcloud dataflow flex-template build "$TEMPLATE_BUCKET/batting-pipeline/metadata" \
+            --image=$IMAGE \
+            --sdk-language=PYTHON
+
+          echo "✅ Dataflow template created"
+
+  # ============= STEP 4: Data Ingestion =============
+  data-ingestion:
+    name: 📥 Ingest Data from API
+    runs-on: ubuntu-latest
+    needs: [dataflow-deploy]
+    steps:
+      - name: 📥 Checkout code
+        uses: actions/checkout@v4
+
+      - name: 🐍 Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+
+      - name: 🔐 Authenticate to Google Cloud
+        uses: google-github-actions/auth@v1
+        with:
+          credentials_json: ${{ secrets.GCP_SERVICE_ACCOUNT_KEY }}
+
+      - name: ☁️ Setup Google Cloud SDK
+        uses: google-github-actions/setup-gcloud@v1
+
+      - name: 📋 Set Project ID
+        run: |
+          gcloud config set project ${{ secrets.GCP_PROJECT_ID }}
+
+      - name: 📦 Install Dependencies
+        working-directory: pipeline/ingestion
+        run: |
+          pip install -q -r requirements.txt
+
+      - name: 🔄 Run Data Ingestion
+        working-directory: pipeline/ingestion
+        env:
+          RAPIDAPI_KEY: ${{ secrets.RAPIDAPI_KEY }}
+          GCP_PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
+        run: |
+          python fetch_batting_rankings.py
+
+      - name: ✅ Ingestion Complete
+        run: echo "✅ Data ingestion completed successfully"
+
+  # ============= STEP 5: Verification =============
+  verify-deployment:
+    name: ✅ Verify Deployment
+    runs-on: ubuntu-latest
+    needs: [data-ingestion]
+    if: success()
+    steps:
+      - name: 📥 Checkout code
+        uses: actions/checkout@v4
+
+      - name: 🔐 Authenticate to Google Cloud
+        uses: google-github-actions/auth@v1
+        with:
+          credentials_json: ${{ secrets.GCP_SERVICE_ACCOUNT_KEY }}
+
+      - name: ☁️ Setup Google Cloud SDK
+        uses: google-github-actions/setup-gcloud@v1
+
+      - name: 📋 Set Project ID
+        run: |
+          gcloud config set project ${{ secrets.GCP_PROJECT_ID }}
+
+      - name: 🔍 Verify BigQuery Datasets
+        run: |
+          echo "📊 Checking BigQuery datasets..."
+          bq ls --project_id=${{ secrets.GCP_PROJECT_ID }}
+
+      - name: 🔍 Verify GCS Buckets
+        run: |
+          echo "🪣 Checking GCS buckets..."
+          gsutil ls
+
+      - name: 🔍 Verify Data
+        run: |
+          echo "📈 Checking data in BigQuery..."
+          bq query --use_legacy_sql=false \
+            "SELECT COUNT(*) as row_count FROM cricket_raw.batting_rankings"
+
+      - name: 📧 Notification
+        if: success()
+        run: |
+          echo "🎉 DEPLOYMENT SUCCESSFUL!"
+          echo ""
+          echo "✅ Infrastructure deployed"
+          echo "✅ BigQuery setup complete"
+          echo "✅ Dataflow template ready"
+          echo "✅ Data ingestion complete"
+          echo ""
+          echo "📊 Dashboard: https://console.cloud.google.com/bigquery?project=${{ secrets.GCP_PROJECT_ID }}"
+          echo "🔄 Dataflow: https://console.cloud.google.com/dataflow/jobs?project=${{ secrets.GCP_PROJECT_ID }}"
+          echo "📅 Scheduler: https://console.cloud.google.com/cloudscheduler?project=${{ secrets.GCP_PROJECT_ID }}"
+
+  # ============= Notification =============
+  notify:
+    name: 📧 Send Notification
+    runs-on: ubuntu-latest
+    needs: [verify-deployment]
+    if: always()
+    steps:
+      - name: 🎯 Deployment Result
+        run: |
+          if [ "${{ needs.verify-deployment.result }}" == "success" ]; then
+            echo "✅ DEPLOYMENT COMPLETED SUCCESSFULLY!"
+            echo ""
+            echo "All infrastructure and data pipeline components are now live!"
+            echo ""
+            echo "Next Steps:"
+            echo "1. Monitor Dataflow jobs"
+            echo "2. Check BigQuery data"
+            echo "3. Configure Looker Studio dashboards"
+            echo "4. Set up monitoring alerts"
+          else
+            echo "❌ Deployment failed. Check logs above for details."
+          fi

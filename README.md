@@ -29,7 +29,7 @@ Looker Studio Dashboard
 ## Project Structure
 
 ```
-P1/
+cricket-analytics-pipeline/
 ├── config/
 │   └── config.yaml                    # Configuration (API keys, buckets, datasets)
 ├── ingestion/

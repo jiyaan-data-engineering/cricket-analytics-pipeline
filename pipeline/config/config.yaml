@@ -42,3 +42,7 @@ dataflow:
 looker:
   dashboard_title: "Cricket Batting Rankings Analytics"
   refresh_interval_minutes: 60
+
+# Pipeline Status: Active and Ready for Deployment
+deployment_status: "READY"
+deployment_date: "2026-06-07"

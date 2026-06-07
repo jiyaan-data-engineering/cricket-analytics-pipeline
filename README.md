@@ -3,6 +3,7 @@
 **Author**: Satish Mudde  
 **Status**: ✅ Production Ready  
 **Last Updated**: 2026-06-07  
+**Deployment**: ✅ Active and Running  
 
 End-to-end GCP data engineering pipeline that ingests ICC Men's Batting Rankings from Cricbuzz API, processes it through Apache Beam Dataflow, and surfaces it in BigQuery with Medallion Architecture (Raw → Staging → Curated) for analytics and dashboard visualization.
 

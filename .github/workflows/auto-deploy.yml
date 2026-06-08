@@ -9,6 +9,10 @@ on:
       - '.github/workflows/auto-deploy.yml'
   workflow_dispatch:  # Manual trigger
 
+permissions:
+  id-token: write
+  contents: read
+
 env:
   GCP_REGION: us-central1
   DOCKER_REGISTRY: us-central1-docker.pkg.dev

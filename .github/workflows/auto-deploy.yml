@@ -115,7 +115,7 @@ jobs:
         uses: google-github-actions/auth@v1
         with:
           workload_identity_provider: "projects/185087551442/locations/global/workloadIdentityPools/github-actions-pool/providers/github-provider"
-          service_account_email: "github-actions-deployer@cricbuzz-satish-dev.iam.gserviceaccount.com"
+          service_account: "github-actions-deployer@cricbuzz-satish-dev.iam.gserviceaccount.com"
 
       - name: ☁️ Setup Google Cloud SDK
         uses: google-github-actions/setup-gcloud@v1
@@ -273,7 +273,7 @@ jobs:
         uses: google-github-actions/auth@v1
         with:
           workload_identity_provider: "projects/185087551442/locations/global/workloadIdentityPools/github-actions-pool/providers/github-provider"
-          service_account_email: "github-actions-deployer@cricbuzz-satish-dev.iam.gserviceaccount.com"
+          service_account: "github-actions-deployer@cricbuzz-satish-dev.iam.gserviceaccount.com"
 
       - name: ☁️ Setup Google Cloud SDK
         uses: google-github-actions/setup-gcloud@v1
@@ -325,7 +325,7 @@ jobs:
         uses: google-github-actions/auth@v1
         with:
           workload_identity_provider: "projects/185087551442/locations/global/workloadIdentityPools/github-actions-pool/providers/github-provider"
-          service_account_email: "github-actions-deployer@cricbuzz-satish-dev.iam.gserviceaccount.com"
+          service_account: "github-actions-deployer@cricbuzz-satish-dev.iam.gserviceaccount.com"
 
       - name: ☁️ Setup Google Cloud SDK
         uses: google-github-actions/setup-gcloud@v1
@@ -381,7 +381,7 @@ jobs:
         uses: google-github-actions/auth@v1
         with:
           workload_identity_provider: "projects/185087551442/locations/global/workloadIdentityPools/github-actions-pool/providers/github-provider"
-          service_account_email: "github-actions-deployer@cricbuzz-satish-dev.iam.gserviceaccount.com"
+          service_account: "github-actions-deployer@cricbuzz-satish-dev.iam.gserviceaccount.com"
 
       - name: ☁️ Setup Google Cloud SDK
         uses: google-github-actions/setup-gcloud@v1
@@ -420,7 +420,7 @@ jobs:
         uses: google-github-actions/auth@v1
         with:
           workload_identity_provider: "projects/185087551442/locations/global/workloadIdentityPools/github-actions-pool/providers/github-provider"
-          service_account_email: "github-actions-deployer@cricbuzz-satish-dev.iam.gserviceaccount.com"
+          service_account: "github-actions-deployer@cricbuzz-satish-dev.iam.gserviceaccount.com"
 
       - name: ☁️ Setup Google Cloud SDK
         uses: google-github-actions/setup-gcloud@v1
@@ -522,7 +522,7 @@ jobs:
         uses: google-github-actions/auth@v1
         with:
           workload_identity_provider: "projects/185087551442/locations/global/workloadIdentityPools/github-actions-pool/providers/github-provider"
-          service_account_email: "github-actions-deployer@cricbuzz-satish-dev.iam.gserviceaccount.com"
+          service_account: "github-actions-deployer@cricbuzz-satish-dev.iam.gserviceaccount.com"
 
       - name: ☁️ Setup Google Cloud SDK
         uses: google-github-actions/setup-gcloud@v1

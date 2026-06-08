@@ -90,7 +90,7 @@ output "cloud_function_service_account_email" {
 }
 
 output "cloud_composer_service_account_email" {
-  value       = google_service_account.cloud_composer_sa.email
+  value       = google_service_account.composer_sa.email
   description = "Cloud Composer service account email"
 }
 
@@ -167,7 +167,7 @@ output "deployment_summary" {
     cloud_composer_status = var.enable_cloud_composer ? "Enabled" : "Disabled"
     dataflow_sa           = google_service_account.dataflow_sa.email
     function_sa           = google_service_account.cloud_function_sa.email
-    composer_sa           = google_service_account.cloud_composer_sa.email
+    composer_sa           = google_service_account.composer_sa.email
   }
   description = "Summary of all deployed resources"
 }

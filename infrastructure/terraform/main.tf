@@ -63,18 +63,9 @@ resource "google_service_account" "cloud_function_sa" {
   depends_on = [google_project_service.required_apis["iam.googleapis.com"]]
 }
 
-# Cloud Composer Service Account
-resource "google_service_account" "cloud_composer_sa" {
-  account_id   = var.cloud_composer_sa_name
-  display_name = "Cricket Analytics Cloud Composer Service Account"
-
-  depends_on = [google_project_service.required_apis["iam.googleapis.com"]]
-}
-
 # ============================================================================
 # GRANT IAM ROLES TO SERVICE ACCOUNTS
 # ============================================================================
-
 # Dataflow SA - BigQuery Admin
 resource "google_project_iam_member" "dataflow_bq_admin" {
   project = var.gcp_project_id
@@ -110,26 +101,7 @@ resource "google_project_iam_member" "function_storage_viewer" {
   member  = "serviceAccount:${google_service_account.cloud_function_sa.email}"
 }
 
-# Cloud Composer SA - BigQuery Admin
-resource "google_project_iam_member" "composer_bq_admin" {
-  project = var.gcp_project_id
-  role    = "roles/bigquery.admin"
-  member  = "serviceAccount:${google_service_account.cloud_composer_sa.email}"
-}
 
-# Cloud Composer SA - Dataflow Admin
-resource "google_project_iam_member" "composer_dataflow_admin" {
-  project = var.gcp_project_id
-  role    = "roles/dataflow.admin"
-  member  = "serviceAccount:${google_service_account.cloud_composer_sa.email}"
-}
-
-# Cloud Composer SA - Storage Admin
-resource "google_project_iam_member" "composer_storage_admin" {
-  project = var.gcp_project_id
-  role    = "roles/storage.admin"
-  member  = "serviceAccount:${google_service_account.cloud_composer_sa.email}"
-}
 
 # ============================================================================
 # GCS BUCKETS
@@ -181,97 +153,6 @@ resource "google_bigquery_dataset" "curated" {
   labels = var.labels
 
   depends_on = [google_project_service.required_apis["bigquery.googleapis.com"]]
-}
-
-# ============================================================================
-# CREATE BIGQUERY TABLES
-# ============================================================================
-
-# Raw Batting Rankings Table
-resource "google_bigquery_table" "raw_batting_rankings" {
-  dataset_id = google_bigquery_dataset.raw.dataset_id
-  table_id   = var.bq_raw_table_name
-
-  description = "Raw ICC Men's Batting Rankings"
-  labels      = var.labels
-
-  time_partitioning {
-    type  = "DAY"
-    field = "ingested_at"
-  }
-
-  clustering = ["format", "country"]
-
-  schema = jsonencode([
-    {
-      name        = "rank"
-      type        = "INTEGER"
-      mode        = "NULLABLE"
-      description = "Current ranking"
-    },
-    {
-      name        = "player_id"
-      type        = "STRING"
-      mode        = "NULLABLE"
-      description = "Unique player identifier"
-    },
-    {
-      name        = "player_name"
-      type        = "STRING"
-      mode        = "NULLABLE"
-      description = "Player's full name"
-    },
-    {
-      name        = "country"
-      type        = "STRING"
-      mode        = "NULLABLE"
-      description = "Country name"
-    },
-    {
-      name        = "country_id"
-      type        = "STRING"
-      mode        = "NULLABLE"
-      description = "Country identifier"
-    },
-    {
-      name        = "rating"
-      type        = "FLOAT64"
-      mode        = "NULLABLE"
-      description = "Player rating"
-    },
-    {
-      name        = "points"
-      type        = "FLOAT64"
-      mode        = "NULLABLE"
-      description = "Total points"
-    },
-    {
-      name        = "best_rank"
-      type        = "INTEGER"
-      mode        = "NULLABLE"
-      description = "Career best rank"
-    },
-    {
-      name        = "format"
-      type        = "STRING"
-      mode        = "NULLABLE"
-      description = "Format (TEST/ODI/T20I)"
-    },
-    {
-      name        = "ingested_at"
-      type        = "TIMESTAMP"
-      mode        = "NULLABLE"
-      description = "Ingestion timestamp"
-    },
-    {
-      name        = "source_file"
-      type        = "STRING"
-      mode        = "NULLABLE"
-      description = "Source GCS file path"
-    }
-  ])
-
-  depends_on = [google_bigquery_dataset.raw]
 }
 
 # ============================================================================
@@ -482,7 +363,5 @@ resource "google_monitoring_alert_policy" "dag_failure" {
 locals {
   dataflow_sa_email     = google_service_account.dataflow_sa.email
   function_sa_email     = google_service_account.cloud_function_sa.email
-  composer_sa_email     = google_service_account.cloud_composer_sa.email
-  raw_bucket_name       = google_storage_bucket.raw_data.name        # From gcs.tf
-  templates_bucket_name = google_storage_bucket.dataflow_templates.name  # From gcs.tf
+  composer_sa_email     = google_service_account.composer_sa.email
 }

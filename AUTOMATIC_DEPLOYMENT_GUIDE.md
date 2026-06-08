@@ -123,26 +123,21 @@ chmod +x DEPLOY_AUTOMATIC.sh
 1. GCP_PROJECT_ID
    Value: your-gcp-project-id
 
-2. GCP_SERVICE_ACCOUNT_KEY
-   Value: (Paste entire JSON content of service account key)
-
-3. RAPIDAPI_KEY
+2. RAPIDAPI_KEY
    Value: your-rapidapi-key
 ```
 
-#### **Step 2: Service Account Key Setup**
+#### **Step 2: Configure OIDC authentication**
+
+Use GitHub Actions Workload Identity Federation instead of a service account key.
 
 ```bash
-# 1. Create service account in GCP Console
-# 2. Grant roles:
-#    - Terraform Admin
-#    - BigQuery Admin
-#    - Storage Admin
-#    - Dataflow Admin
-#    - Cloud Functions Developer
-# 3. Create JSON key
-# 4. Copy entire JSON content (everything between { and })
-# 5. Paste into GCP_SERVICE_ACCOUNT_KEY secret
+# 1. Create a service account in GCP Console
+# 2. Grant the service account only the roles your deployment needs
+# 3. Create a Workload Identity Pool and GitHub OIDC provider
+# 4. Bind the provider to the service account with roles/iam.workloadIdentityUser
+# 5. Update the GitHub Actions workflow to use workload_identity_provider
+#    and service_account_email instead of credentials_json
 ```
 
 #### **Step 3: Trigger Automatic Deployment**

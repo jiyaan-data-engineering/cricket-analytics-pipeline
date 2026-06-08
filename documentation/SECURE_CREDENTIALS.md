@@ -203,7 +203,6 @@ Production:
 1. Go to: Settings → Secrets and variables → Actions
 2. Add secrets:
    - `GCP_PROJECT_ID` = your-project-id
-   - `GCP_SERVICE_ACCOUNT_KEY` = (paste entire JSON key)
    - `RAPIDAPI_KEY` = your-api-key
 
 **Use in workflow:**
@@ -211,7 +210,8 @@ Production:
 - name: Authenticate to Google Cloud
   uses: google-github-actions/auth@v1
   with:
-    credentials_json: ${{ secrets.GCP_SERVICE_ACCOUNT_KEY }}
+    workload_identity_provider: "projects/185087551442/locations/global/workloadIdentityPools/github-actions-pool/providers/github-provider"
+    service_account_email: "github-actions-deployer@cricbuzz-satish-dev.iam.gserviceaccount.com"
 
 - name: Run tests
   env:

@@ -61,11 +61,6 @@ output "bigquery_curated_dataset" {
   description = "BigQuery curated dataset"
 }
 
-output "bigquery_raw_dataset" {
-  value       = google_bigquery_dataset.raw.dataset_id
-  description = "Raw dataset ID"
-}
-
 output "bigquery_datasets_summary" {
   value = {
     raw     = google_bigquery_dataset.raw.dataset_id

@@ -141,7 +141,7 @@ output "artifact_registry_name" {
 }
 
 output "artifact_registry_url" {
-  value       = google_artifact_registry_repository.docker_repo.repository_url
+  value       = google_artifact_registry_repository.docker_repo.repository
   description = "Artifact Registry repository URL"
 }
 

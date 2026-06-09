@@ -149,14 +149,6 @@ resource "google_storage_bucket" "cloud_function_source" {
 }
 
 # Upload placeholder Cloud Function source
-resource "google_storage_object_content" "function_source" {
-  name   = "cricket-function-source.zip"
-  bucket = google_storage_bucket.cloud_function_source.name
-  source = null # In real deployment, provide actual source zip
-
-  # NOTE: Replace this with actual Cloud Function source code
-  # See cloud_function/main.py for the actual function
-}
 
 # Cloud Function 2nd Gen
 resource "google_cloudfunctions2_function" "gcs_dataflow_trigger" {
@@ -172,7 +164,7 @@ resource "google_cloudfunctions2_function" "gcs_dataflow_trigger" {
     source {
       storage_source {
         bucket = google_storage_bucket.cloud_function_source.name
-        object = google_storage_bucket_object.function_source.name
+        object = "placeholder.zip"
       }
     }
   }
@@ -210,8 +202,7 @@ resource "google_cloudfunctions2_function" "gcs_dataflow_trigger" {
   }
 
   depends_on = [
-    google_project_service.required_apis["cloudfunctions.googleapis.com"],
-    google_storage_bucket_object.function_source
+    google_project_service.required_apis["cloudfunctions.googleapis.com"]
   ]
 }
 

@@ -61,9 +61,9 @@ output "bigquery_curated_dataset" {
   description = "BigQuery curated dataset"
 }
 
-output "bigquery_raw_table" {
-  value       = "${google_bigquery_dataset.raw.dataset_id}.${google_bigquery_table.raw_batting_rankings.table_id}"
-  description = "Full path to raw batting rankings table"
+output "bigquery_raw_dataset" {
+  value       = google_bigquery_dataset.raw.dataset_id
+  description = "Raw dataset ID"
 }
 
 output "bigquery_datasets_summary" {
@@ -146,7 +146,7 @@ output "artifact_registry_name" {
 }
 
 output "artifact_registry_url" {
-  value       = google_artifact_registry_repository.docker_repo.repository
+  value       = google_artifact_registry_repository.docker_repo.repository_url
   description = "Artifact Registry repository URL"
 }
 

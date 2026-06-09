@@ -9,7 +9,6 @@ resource "google_storage_bucket" "raw_data" {
   project       = var.gcp_project_id
   force_destroy = false
 
-  description = "Raw data ingestion bucket for cricket rankings"
   labels      = var.labels
 
   uniform_bucket_level_access = true
@@ -33,7 +32,6 @@ resource "google_storage_bucket" "dataflow_temp" {
   project       = var.gcp_project_id
   force_destroy = true
 
-  description = "Dataflow temporary data bucket (auto-cleanup)"
   labels      = var.labels
 
   uniform_bucket_level_access = true

@@ -9,8 +9,7 @@ resource "google_storage_bucket" "raw_data" {
   project       = var.gcp_project_id
   force_destroy = false
 
-  labels      = var.labels
-
+  labels                      = var.labels
   uniform_bucket_level_access = true
 }
 
@@ -20,9 +19,7 @@ resource "google_storage_bucket" "dataflow_templates" {
   project       = var.gcp_project_id
   force_destroy = false
 
-  description = "Dataflow Flex Templates storage"
-  labels      = var.labels
-
+  labels                      = var.labels
   uniform_bucket_level_access = true
 }
 
@@ -32,8 +29,7 @@ resource "google_storage_bucket" "dataflow_temp" {
   project       = var.gcp_project_id
   force_destroy = true
 
-  labels      = var.labels
-
+  labels                      = var.labels
   uniform_bucket_level_access = true
 
   lifecycle_rule {

@@ -38,15 +38,12 @@ resource "google_storage_bucket" "dataflow_temp" {
 
   uniform_bucket_level_access = true
 
-  lifecycle {
-    rule {
-      action {
-        type          = "Delete"
-        storage_class = []
-      }
-      condition {
-        age = 7
-      }
+  lifecycle_rule {
+    action {
+      type = "Delete"
+    }
+    condition {
+      age = 7
     }
   }
 }

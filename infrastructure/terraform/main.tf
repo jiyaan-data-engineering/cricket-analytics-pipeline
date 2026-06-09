@@ -117,46 +117,9 @@ resource "google_project_iam_member" "function_storage_viewer" {
 # CREATE BIGQUERY DATASETS
 # ============================================================================
 
-# Raw Dataset
-resource "google_bigquery_dataset" "raw" {
-  dataset_id    = var.bq_raw_dataset
-  friendly_name = "Cricket Raw Data"
-  description   = "Raw cricket data layer - exact copy from API"
-  location      = var.gcp_region
-
-  default_table_expiration_ms = var.bq_table_expiration_days * 24 * 60 * 60 * 1000
-
-  labels = var.labels
-
-  depends_on = [google_project_service.required_apis["bigquery.googleapis.com"]]
-}
-
-# Staging Dataset
-resource "google_bigquery_dataset" "staging" {
-  dataset_id    = var.bq_staging_dataset
-  friendly_name = "Cricket Staging Data"
-  description   = "Staging layer with star schema and dimension tables"
-  location      = var.gcp_region
-
-  labels = var.labels
-
-  depends_on = [google_project_service.required_apis["bigquery.googleapis.com"]]
-}
-
-# Curated Dataset
-resource "google_bigquery_dataset" "curated" {
-  dataset_id    = var.bq_curated_dataset
-  friendly_name = "Cricket Curated Analytics"
-  description   = "Curated analytics layer with pre-joined views"
-  location      = var.gcp_region
-
-  labels = var.labels
-
-  depends_on = [google_project_service.required_apis["bigquery.googleapis.com"]]
-}
-
 # ============================================================================
 # CREATE ARTIFACT REGISTRY
+# (BigQuery datasets are defined in bigquery.tf)
 # ============================================================================
 
 resource "google_artifact_registry_repository" "docker_repo" {

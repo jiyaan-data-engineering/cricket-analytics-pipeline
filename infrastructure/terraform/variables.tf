@@ -34,6 +34,12 @@ variable "environment" {
 # GCS BUCKET NAMES - All Configurable
 # ============================================================================
 
+variable "bucket_prefix" {
+  description = "Prefix for bucket names"
+  type        = string
+  default     = "cricket"
+}
+
 variable "gcs_raw_bucket_name" {
   description = "GCS bucket name for raw data ingestion"
   type        = string

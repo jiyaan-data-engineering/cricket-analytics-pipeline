@@ -12,8 +12,8 @@ resource "google_composer_environment" "cricket_analytics" {
     node_count = 3
 
     node_config {
-      zone   = var.gcp_zone
-      machine_type = var.composer_machine_type
+      zone         = var.gcp_zone
+      machine_type = var.cloud_composer_machine_type
       disk_size_gb = 30
 
       network = data.google_compute_network.default.id

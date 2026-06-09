@@ -141,7 +141,7 @@ output "artifact_registry_name" {
 }
 
 output "artifact_registry_url" {
-  value       = google_artifact_registry_repository.docker_repo.repository
+  value       = "${var.gcp_region}-docker.pkg.dev/${var.gcp_project_id}/${google_artifact_registry_repository.docker_repo.repository_id}"
   description = "Artifact Registry repository URL"
 }
 

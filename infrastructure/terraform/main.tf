@@ -170,10 +170,9 @@ resource "google_cloudfunctions2_function" "gcs_dataflow_trigger" {
   }
 
   service_config {
-    max_instance_count  = var.cloud_function_max_instances
-    timeout_seconds     = var.cloud_function_timeout
-    memory_mb = var.cloud_function_memory
-
+    max_instance_count    = var.cloud_function_max_instances
+    timeout_seconds       = var.cloud_function_timeout
+    available_memory_mb   = var.cloud_function_memory
     service_account_email = google_service_account.cloud_function_sa.email
 
     environment_variables = {

@@ -186,7 +186,7 @@ resource "google_storage_bucket" "cloud_function_source" {
 }
 
 # Upload placeholder Cloud Function source
-resource "google_storage_bucket_object" "function_source" {
+resource "google_storage_object_content" "function_source" {
   name   = "cricket-function-source.zip"
   bucket = google_storage_bucket.cloud_function_source.name
   source = null # In real deployment, provide actual source zip

@@ -173,7 +173,7 @@ resource "google_compute_firewall" "composer_ingress" {
 # ============================================
 
 resource "google_storage_bucket" "composer_dags" {
-  name          = "${var.bucket_prefix}-composer-dags-${var.gcp_project_id}"
+  name          = "${var.cloud_composer_name}-dags-${var.gcp_project_id}"
   location      = var.gcp_region
   force_destroy = false
 

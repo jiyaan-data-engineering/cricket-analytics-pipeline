@@ -211,12 +211,10 @@ resource "google_cloudfunctions2_function" "gcs_dataflow_trigger" {
 resource "google_cloud_scheduler_job" "daily_ingestion" {
   name            = var.cloud_scheduler_job_name
   description     = var.cloud_scheduler_description
-  schedule        = var.cloud_scheduler_schedule
-  time_zone       = var.cloud_scheduler_timezone
-  region          = var.gcp_region
+  schedule         = var.cloud_scheduler_schedule
+  time_zone        = var.cloud_scheduler_timezone
+  region           = var.gcp_region
   attempt_deadline = "320s"
-
-  labels = var.labels
 
   http_target {
     http_method = "POST"

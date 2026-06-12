@@ -113,21 +113,14 @@ jobs:
             echo "❌ ERROR: RAPIDAPI_KEY secret not found!"
             exit 1
           fi
-          if [ -z "${{ secrets.GCP_SERVICE_ACCOUNT_KEY }}" ]; then
-            echo "❌ ERROR: GCP_SERVICE_ACCOUNT_KEY secret not found!"
-            echo "📝 Please add the service account JSON key as a GitHub secret:"
-            echo "   1. Go to Settings → Secrets and variables → Actions"
-            echo "   2. Click 'New repository secret'"
-            echo "   3. Name: GCP_SERVICE_ACCOUNT_KEY"
-            echo "   4. Paste your GCP service account JSON key"
-            exit 1
-          fi
           echo "✅ All required secrets are available!"
+          echo "✅ Using Workload Identity Federation (no service account key needed)"
 
       - name: 🔐 Authenticate to Google Cloud
         uses: google-github-actions/auth@v1
         with:
-          credentials_json: ${{ secrets.GCP_SERVICE_ACCOUNT_KEY }}
+          workload_identity_provider: projects/185087551442/locations/global/workloadIdentityPools/github-actions-pool/providers/github-provider
+          service_account: cricket-dataflow-sa@cricbuzz-satish-dev.iam.gserviceaccount.com
 
       - name: ☁️ Setup Google Cloud SDK
         uses: google-github-actions/setup-gcloud@v1
@@ -284,7 +277,8 @@ jobs:
       - name: 🔐 Authenticate to Google Cloud
         uses: google-github-actions/auth@v1
         with:
-          credentials_json: ${{ secrets.GCP_SERVICE_ACCOUNT_KEY }}
+          workload_identity_provider: projects/185087551442/locations/global/workloadIdentityPools/github-actions-pool/providers/github-provider
+          service_account: cricket-dataflow-sa@cricbuzz-satish-dev.iam.gserviceaccount.com
 
       - name: ☁️ Setup Google Cloud SDK
         uses: google-github-actions/setup-gcloud@v1
@@ -335,7 +329,8 @@ jobs:
       - name: 🔐 Authenticate to Google Cloud
         uses: google-github-actions/auth@v1
         with:
-          credentials_json: ${{ secrets.GCP_SERVICE_ACCOUNT_KEY }}
+          workload_identity_provider: projects/185087551442/locations/global/workloadIdentityPools/github-actions-pool/providers/github-provider
+          service_account: cricket-dataflow-sa@cricbuzz-satish-dev.iam.gserviceaccount.com
 
       - name: ☁️ Setup Google Cloud SDK
         uses: google-github-actions/setup-gcloud@v1
@@ -390,7 +385,8 @@ jobs:
       - name: 🔐 Authenticate to Google Cloud
         uses: google-github-actions/auth@v1
         with:
-          credentials_json: ${{ secrets.GCP_SERVICE_ACCOUNT_KEY }}
+          workload_identity_provider: projects/185087551442/locations/global/workloadIdentityPools/github-actions-pool/providers/github-provider
+          service_account: cricket-dataflow-sa@cricbuzz-satish-dev.iam.gserviceaccount.com
 
       - name: ☁️ Setup Google Cloud SDK
         uses: google-github-actions/setup-gcloud@v1
@@ -428,7 +424,8 @@ jobs:
       - name: 🔐 Authenticate to Google Cloud
         uses: google-github-actions/auth@v1
         with:
-          credentials_json: ${{ secrets.GCP_SERVICE_ACCOUNT_KEY }}
+          workload_identity_provider: projects/185087551442/locations/global/workloadIdentityPools/github-actions-pool/providers/github-provider
+          service_account: cricket-dataflow-sa@cricbuzz-satish-dev.iam.gserviceaccount.com
 
       - name: ☁️ Setup Google Cloud SDK
         uses: google-github-actions/setup-gcloud@v1
@@ -529,7 +526,8 @@ jobs:
       - name: 🔐 Authenticate to Google Cloud
         uses: google-github-actions/auth@v1
         with:
-          credentials_json: ${{ secrets.GCP_SERVICE_ACCOUNT_KEY }}
+          workload_identity_provider: projects/185087551442/locations/global/workloadIdentityPools/github-actions-pool/providers/github-provider
+          service_account: cricket-dataflow-sa@cricbuzz-satish-dev.iam.gserviceaccount.com
 
       - name: ☁️ Setup Google Cloud SDK
         uses: google-github-actions/setup-gcloud@v1

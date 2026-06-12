@@ -259,7 +259,7 @@ resource "google_composer_environment" "cricket_composer" {
       }
 
       env_variables = {
-        GCP_PROJECT     = var.gcp_project_id
+        GCP_PROJECT_ID  = var.gcp_project_id
         GCP_REGION      = var.gcp_region
         RAW_DATASET     = var.bq_raw_dataset
         STAGING_DATASET = var.bq_staging_dataset

@@ -120,7 +120,7 @@ jobs:
         uses: google-github-actions/auth@v2
         with:
           workload_identity_provider: projects/185087551442/locations/global/workloadIdentityPools/github-actions-pool/providers/github-provider
-          service_account: cricket-dataflow-sa@cricbuzz-satish-dev.iam.gserviceaccount.com
+          service_account: github-actions-deployer@cricbuzz-satish-dev.iam.gserviceaccount.com
           token_format: access_token
           access_token_lifetime: 1200s
 
@@ -280,7 +280,7 @@ jobs:
         uses: google-github-actions/auth@v2
         with:
           workload_identity_provider: projects/185087551442/locations/global/workloadIdentityPools/github-actions-pool/providers/github-provider
-          service_account: cricket-dataflow-sa@cricbuzz-satish-dev.iam.gserviceaccount.com
+          service_account: github-actions-deployer@cricbuzz-satish-dev.iam.gserviceaccount.com
           token_format: access_token
           access_token_lifetime: 1200s
 
@@ -334,7 +334,7 @@ jobs:
         uses: google-github-actions/auth@v2
         with:
           workload_identity_provider: projects/185087551442/locations/global/workloadIdentityPools/github-actions-pool/providers/github-provider
-          service_account: cricket-dataflow-sa@cricbuzz-satish-dev.iam.gserviceaccount.com
+          service_account: github-actions-deployer@cricbuzz-satish-dev.iam.gserviceaccount.com
           token_format: access_token
           access_token_lifetime: 1200s
 
@@ -392,7 +392,7 @@ jobs:
         uses: google-github-actions/auth@v2
         with:
           workload_identity_provider: projects/185087551442/locations/global/workloadIdentityPools/github-actions-pool/providers/github-provider
-          service_account: cricket-dataflow-sa@cricbuzz-satish-dev.iam.gserviceaccount.com
+          service_account: github-actions-deployer@cricbuzz-satish-dev.iam.gserviceaccount.com
           token_format: access_token
           access_token_lifetime: 1200s
 
@@ -433,7 +433,7 @@ jobs:
         uses: google-github-actions/auth@v2
         with:
           workload_identity_provider: projects/185087551442/locations/global/workloadIdentityPools/github-actions-pool/providers/github-provider
-          service_account: cricket-dataflow-sa@cricbuzz-satish-dev.iam.gserviceaccount.com
+          service_account: github-actions-deployer@cricbuzz-satish-dev.iam.gserviceaccount.com
           token_format: access_token
           access_token_lifetime: 1200s
 
@@ -537,7 +537,7 @@ jobs:
         uses: google-github-actions/auth@v2
         with:
           workload_identity_provider: projects/185087551442/locations/global/workloadIdentityPools/github-actions-pool/providers/github-provider
-          service_account: cricket-dataflow-sa@cricbuzz-satish-dev.iam.gserviceaccount.com
+          service_account: github-actions-deployer@cricbuzz-satish-dev.iam.gserviceaccount.com
           token_format: access_token
           access_token_lifetime: 1200s
 

@@ -630,3 +630,4 @@ This project is provided as-is for educational and commercial use.
 
 **Ready to deploy?** Start with [GCP_SETUP_GUIDE.md](GCP_SETUP_GUIDE.md) 🚀
 
+# Cloud Function bucket manually created

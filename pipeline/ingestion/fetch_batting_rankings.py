@@ -28,10 +28,11 @@ def load_config():
         return yaml.safe_load(f)
 
 def get_api_key(config: dict) -> str:
-    """Get RapidAPI key from config file."""
-    api_key = config.get("apis", {}).get("rapidapi", {}).get("api_key")
+    """Get RapidAPI key from environment variable."""
+    import os
+    api_key = os.getenv("RAPIDAPI_KEY")
     if not api_key:
-        raise ValueError("API key not found in config.yaml")
+        raise ValueError("RAPIDAPI_KEY environment variable not set")
     return api_key
 
 def fetch_rankings(format_type: str, api_key: str, config: dict) -> dict:

@@ -151,23 +151,21 @@ jobs:
           echo "   ├─ Providers downloaded"
           echo "   └─ Modules loaded"
 
-      # ========== STEP 1A+: Import Existing Resources ==========
-      - name: 📦 Import Existing Resources
+      # ========== STEP 1A+: Refresh Terraform State ==========
+      - name: 🔄 Refresh Terraform State
         working-directory: infrastructure/terraform
         continue-on-error: true
         run: |
-          echo "📍 Importing existing resources into Terraform state..."
-          echo "   This ensures idempotent deployments (won't try to recreate existing resources)"
+          echo "📍 Refreshing Terraform state to sync with actual GCP resources..."
           echo ""
 
-          # Make import script executable
-          chmod +x import-existing.sh
-
-          # Run import script
-          ./import-existing.sh "${{ secrets.GCP_PROJECT_ID }}"
+          terraform refresh \
+            -var="gcp_project_id=${{ secrets.GCP_PROJECT_ID }}" \
+            -var="gcp_region=${{ env.GCP_REGION }}" \
+            -lock=false
 
           echo ""
-          echo "✅ Import step completed (failures are OK if resources don't exist yet)"
+          echo "✅ State refresh completed (Terraform now knows about existing resources)"
 
       # ========== STEP 1B: Terraform Plan ==========
       - name: 📋 Terraform Plan

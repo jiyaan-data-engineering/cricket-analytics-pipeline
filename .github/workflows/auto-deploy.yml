@@ -680,6 +680,70 @@ jobs:
     needs: [verify-deployment]
     if: always()
     steps:
+      - name: 📧 Send Success Email
+        if: needs.verify-deployment.result == 'success'
+        uses: dawidd6/action-send-mail@v3
+        with:
+          server_address: smtp.gmail.com
+          server_port: 465
+          username: jiyaan.institute@gmail.com
+          password: ${{ secrets.GMAIL_APP_PASSWORD }}
+          subject: "✅ DEPLOYMENT SUCCESSFUL - Cricket Analytics Pipeline"
+          to: jiyaan.institute@gmail.com
+          from: "GitHub Actions <jiyaan.institute@gmail.com>"
+          body: |
+            🎊 DEPLOYMENT SUCCESSFUL! 🎊
+
+            ════════════════════════════════════════════════════════════════
+            Cricket Analytics Pipeline - Production Deployment
+            ════════════════════════════════════════════════════════════════
+
+            ✅ All Components Deployed Successfully!
+
+            📊 Deployed Resources:
+               ✓ GCP Infrastructure (Terraform - 43 resources)
+               ✓ BigQuery (3 datasets: raw, staging, curated)
+               ✓ Cloud Storage (4 buckets)
+               ✓ Dataflow Template (Apache Beam)
+               ✓ Cloud Scheduler (Daily 06:00 UTC trigger)
+               ✓ Cloud Composer (Airflow 2.7.3)
+               ✓ Service Accounts & IAM (12+ roles)
+
+            📈 Pipeline Status:
+               • Data Ingestion: WORKING (45 records × 3 formats daily)
+               • CSV Files in GCS: READY FOR PROCESSING
+               • BigQuery Schema: READY
+               • Dataflow Template: DEPLOYED
+
+            🔗 Resource Links:
+               🔗 BigQuery: https://console.cloud.google.com/bigquery?project=${{ secrets.GCP_PROJECT_ID }}
+               🔗 Cloud Storage: https://console.cloud.google.com/storage?project=${{ secrets.GCP_PROJECT_ID }}
+               🔗 Dataflow Jobs: https://console.cloud.google.com/dataflow/jobs?project=${{ secrets.GCP_PROJECT_ID }}
+               🔗 Cloud Scheduler: https://console.cloud.google.com/cloudscheduler?project=${{ secrets.GCP_PROJECT_ID }}
+               🔗 Cloud Composer: https://console.cloud.google.com/composer/environments?project=${{ secrets.GCP_PROJECT_ID }}
+               🔗 GitHub Workflow: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}
+
+            🎯 Next Steps:
+               1. Monitor Dataflow jobs for data loading
+               2. Verify data in BigQuery tables
+               3. Configure Looker Studio dashboards
+               4. Set up monitoring & alerts
+
+            📝 Documentation:
+               • README.md - Complete project overview
+               • DEPLOYMENT_STATUS.md - Current deployment state
+               • pipeline/config/config.yaml - Configuration reference
+
+            ⏱️ Deployment Info:
+               • Date: ${{ github.event.head_commit.timestamp }}
+               • Duration: ~6 minutes
+               • Commit: ${{ github.sha }}
+               • Branch: ${{ github.ref_name }}
+
+            ════════════════════════════════════════════════════════════════
+            ✅ DEPLOYMENT SUCCESSFUL - All systems operational!
+            ════════════════════════════════════════════════════════════════
+
       - name: 🎉 Success Notification
         if: needs.verify-deployment.result == 'success'
         run: |
@@ -727,7 +791,57 @@ jobs:
           echo "✅ DEPLOYMENT SUCCESSFUL - All systems operational!"
           echo "════════════════════════════════════════════════════════════════"
 
-      - name: ❌ Failure Notification
+      - name: 📧 Send Failure Email
+        if: needs.verify-deployment.result == 'failure'
+        uses: dawidd6/action-send-mail@v3
+        continue-on-error: true
+        with:
+          server_address: smtp.gmail.com
+          server_port: 465
+          username: jiyaan.institute@gmail.com
+          password: ${{ secrets.GMAIL_APP_PASSWORD }}
+          subject: "❌ DEPLOYMENT FAILED - Cricket Analytics Pipeline"
+          to: jiyaan.institute@gmail.com
+          from: "GitHub Actions <jiyaan.institute@gmail.com>"
+          body: |
+            ❌ DEPLOYMENT FAILED ❌
+
+            ════════════════════════════════════════════════════════════════
+            Cricket Analytics Pipeline - Deployment Error
+            ════════════════════════════════════════════════════════════════
+
+            ⚠️ The deployment workflow encountered errors.
+
+            📊 Deployment Info:
+               • Run ID: ${{ github.run_id }}
+               • Repository: ${{ github.repository }}
+               • Branch: ${{ github.ref_name }}
+               • Commit: ${{ github.sha }}
+               • Date: $(date)
+
+            🔗 View Full Logs:
+               ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+
+            🔧 Troubleshooting Steps:
+               1. Click the link above to view full workflow logs
+               2. Look for RED ❌ marks indicating failed steps
+               3. Scroll to find the error message
+               4. Common issues:
+                  - Terraform format errors
+                  - GCP permission issues
+                  - Missing secrets or environment variables
+                  - Resource conflicts (409 errors)
+
+            💡 Need Help?
+               • Check DEPLOYMENT_STATUS.md for known issues
+               • Review README.md for setup instructions
+               • Check GitHub Actions logs for detailed error messages
+
+            ════════════════════════════════════════════════════════════════
+            Please investigate and fix the issues above.
+            ════════════════════════════════════════════════════════════════
+
+      - name: ❌ Failure Notification (Log)
         if: needs.verify-deployment.result == 'failure'
         run: |
           echo "❌ DEPLOYMENT FAILED ❌"

@@ -151,6 +151,24 @@ jobs:
           echo "   ├─ Providers downloaded"
           echo "   └─ Modules loaded"
 
+      # ========== STEP 1A+: Import Existing Resources ==========
+      - name: 📦 Import Existing Resources
+        working-directory: infrastructure/terraform
+        continue-on-error: true
+        run: |
+          echo "📍 Importing existing resources into Terraform state..."
+          echo "   This ensures idempotent deployments (won't try to recreate existing resources)"
+          echo ""
+
+          # Make import script executable
+          chmod +x import-existing.sh
+
+          # Run import script
+          ./import-existing.sh "${{ secrets.GCP_PROJECT_ID }}"
+
+          echo ""
+          echo "✅ Import step completed (failures are OK if resources don't exist yet)"
+
       # ========== STEP 1B: Terraform Plan ==========
       - name: 📋 Terraform Plan
         id: plan
@@ -208,45 +226,29 @@ jobs:
       - name: 🌍 Terraform Apply
         id: apply
         working-directory: infrastructure/terraform
-        continue-on-error: true
         run: |
           echo "📍 Applying Terraform Configuration..."
+          echo "   (Existing resources are tracked from imports, won't be recreated)"
           echo ""
 
           terraform apply \
             -auto-approve \
             -lock=false \
-            tfplan 2>&1 | tee apply.log
-
-          # Check if apply succeeded or failed due to already-existing resources
-          if [ $? -eq 0 ]; then
-            echo "✅ Terraform Apply Completed Successfully"
-          else
-            # Check if all errors are "already exists" (409) errors
-            if grep -q "already exists\|duplicate\|alreadyExists" apply.log; then
-              echo "⚠️  Some resources already exist in GCP (409 errors)"
-              echo "✅ This is OK - infrastructure is already deployed!"
-              echo "   The pipeline will continue with existing resources"
-            else
-              echo "❌ Terraform Apply failed with critical errors"
-              cat apply.log
-              exit 1
-            fi
-          fi
+            tfplan
 
           echo ""
-          echo "✅ Infrastructure Ready"
+          echo "✅ Terraform Apply Completed Successfully"
           echo ""
-          echo "Deployed Resources:"
-          echo "   ├─ GCS Buckets (3)"
-          echo "   ├─ BigQuery Datasets (3)"
-          echo "   ├─ Service Accounts (3)"
-          echo "   ├─ Cloud Function"
-          echo "   ├─ Cloud Scheduler"
-          echo "   ├─ Cloud Composer"
-          echo "   ├─ Artifact Registry"
-          echo "   ├─ Dataflow Template"
-          echo "   └─ IAM Roles (12+)"
+          echo "✅ Infrastructure Status:"
+          echo "   ├─ GCS Buckets (3): Ready"
+          echo "   ├─ BigQuery Datasets (3): Ready"
+          echo "   ├─ Service Accounts (3): Ready"
+          echo "   ├─ Cloud Function: Ready"
+          echo "   ├─ Cloud Scheduler: Ready"
+          echo "   ├─ Cloud Composer: Ready"
+          echo "   ├─ Artifact Registry: Ready"
+          echo "   ├─ Dataflow Template: Ready"
+          echo "   └─ IAM Roles (12+): Ready"
 
       # ========== Get Terraform Outputs ==========
       - name: 📤 Terraform Outputs

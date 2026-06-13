@@ -28,6 +28,7 @@ variable "environment" {
   description = "Environment name (dev, staging, prod)"
   type        = string
   default     = "dev"
+  # Deployment triggered - June 13, 2026
 }
 
 # ============================================================================

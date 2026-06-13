@@ -5,10 +5,10 @@ gcp:
   region: "us-central1"
 
 gcs:
-  raw_bucket: "cricket-raw-data"
+  raw_bucket: "cricket-analytics-raw-data-cricbuzz-satish-dev"
   raw_prefix: "batting/"
-  template_bucket: "cricket-dataflow-templates"
-  temp_bucket: "cricket-dataflow-temp"
+  template_bucket: "cricket-analytics-dataflow-templates-cricbuzz-satish-dev"
+  temp_bucket: "cricket-analytics-dataflow-temp-cricbuzz-satish-dev"
 
 bigquery:
   dataset_raw: "cricket_raw"

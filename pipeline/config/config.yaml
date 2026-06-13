@@ -44,5 +44,5 @@ looker:
   refresh_interval_minutes: 60
 
 # Pipeline Status: Active and Ready for Deployment
-deployment_status: "READY"
+deployment_status: "LIVE"
 deployment_date: "2026-06-13"

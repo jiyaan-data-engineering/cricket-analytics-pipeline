@@ -30,13 +30,13 @@ resource "google_project_service" "required_apis" {
     "dataflow.googleapis.com",
     "cloudfunctions.googleapis.com",
     "cloudscheduler.googleapis.com",
-    "cloudrun.googleapis.com",
     "artifactregistry.googleapis.com",
     "eventarc.googleapis.com",
     "logging.googleapis.com",
     "compute.googleapis.com",
     "composer.googleapis.com",
-    "iam.googleapis.com"
+    "iam.googleapis.com",
+    "cloudkms.googleapis.com"
   ])
 
   service            = each.value

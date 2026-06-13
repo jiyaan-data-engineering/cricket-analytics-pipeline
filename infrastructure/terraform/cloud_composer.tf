@@ -208,62 +208,9 @@ resource "google_storage_bucket_object" "data_quality_dag" {
 
 # ============================================
 # Monitoring & Logging
+# Note: Composer monitoring alerts temporarily disabled
+# TODO: Update with correct metric types when Composer metrics are available
 # ============================================
 
-resource "google_monitoring_alert_policy" "composer_dag_failure" {
-  display_name = "Composer DAG Failure Alert"
-  combiner     = "OR"
-  enabled      = true
-
-  conditions {
-    display_name = "DAG task failure"
-
-    condition_threshold {
-      filter          = "resource.type=cloud_composer_environment AND metric.type=composer.googleapis.com/environment/dag_run/failed"
-      duration        = "300s"
-      comparison      = "COMPARISON_GT"
-      threshold_value = 0
-
-      aggregations {
-        alignment_period  = "60s"
-        per_series_aligner = "ALIGN_SUM"
-      }
-    }
-  }
-
-  notification_channels = []  # Add your notification channel IDs
-
-  documentation {
-    content   = "DAG task has failed in Cricket Analytics Composer environment"
-    mime_type = "text/markdown"
-  }
-}
-
-resource "google_monitoring_alert_policy" "composer_environment_health" {
-  display_name = "Composer Environment Health Alert"
-  combiner     = "OR"
-  enabled      = true
-
-  conditions {
-    display_name = "Unhealthy environment"
-
-    condition_threshold {
-      filter          = "resource.type=cloud_composer_environment AND metric.type=composer.googleapis.com/environment/is_healthy"
-      duration        = "300s"
-      comparison      = "COMPARISON_LT"
-      threshold_value = 1
-
-      aggregations {
-        alignment_period  = "60s"
-        per_series_aligner = "ALIGN_MEAN"
-      }
-    }
-  }
-
-  notification_channels = []  # Add your notification channel IDs
-
-  documentation {
-    content   = "Cricket Analytics Composer environment health check failed"
-    mime_type = "text/markdown"
-  }
-}
+# Monitoring alerts for Composer will be added in a future update
+# with correct metric.type values

@@ -594,7 +594,7 @@ jobs:
       - name: 🔍 Verify Dataflow Template
         run: |
           echo "🔄 Checking Dataflow template..."
-          gsutil ls gs://cricket-dataflow-templates-${{ secrets.GCP_PROJECT_ID }}/
+          gsutil ls gs://cricket-analytics-dataflow-templates-${{ secrets.GCP_PROJECT_ID }}/
           echo "✅ Dataflow template deployed"
 
       - name: 🔍 Verify Tables & Views

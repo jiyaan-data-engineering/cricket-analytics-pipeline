@@ -405,6 +405,26 @@ jobs:
 
           echo "✅ Dataflow template created"
 
+      - name: 📦 Deploy Cloud Function
+        run: |
+          echo "🔄 Building Cloud Function..."
+
+          # Create a temporary directory with required files
+          mkdir -p /tmp/cf-deploy
+          cp pipeline/cloud_function/main.py /tmp/cf-deploy/
+          cp pipeline/cloud_function/requirements.txt /tmp/cf-deploy/
+          cp pipeline/config/config.yaml /tmp/cf-deploy/
+
+          # Create a zip file with the Cloud Function code and config
+          cd /tmp/cf-deploy
+          zip -r function.zip main.py requirements.txt config.yaml
+
+          # Upload to Cloud Function source bucket
+          FUNCTION_SOURCE_BUCKET="${{ secrets.GCP_PROJECT_ID }}-cloud-function-source"
+          gsutil cp function.zip "gs://$FUNCTION_SOURCE_BUCKET/function.zip"
+
+          echo "✅ Cloud Function code uploaded to gs://$FUNCTION_SOURCE_BUCKET/function.zip"
+
   # ============= STEP 4: Data Ingestion =============
   data-ingestion:
     name: 📥 Ingest Data from API

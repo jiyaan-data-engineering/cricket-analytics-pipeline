@@ -23,9 +23,18 @@ logger = logging.getLogger(__name__)
 
 def load_config() -> dict:
     """Load configuration from config.yaml"""
-    config_path = Path(__file__).parent.parent / "config" / "config.yaml"
-    with open(config_path, "r") as f:
-        return yaml.safe_load(f)
+    # Try multiple paths to support both local and deployed scenarios
+    possible_paths = [
+        Path(__file__).parent / "config.yaml",  # When deployed as Cloud Function
+        Path(__file__).parent.parent / "config" / "config.yaml",  # Local development
+    ]
+
+    for config_path in possible_paths:
+        if config_path.exists():
+            with open(config_path, "r") as f:
+                return yaml.safe_load(f)
+
+    raise FileNotFoundError(f"config.yaml not found in any of: {possible_paths}")
 
 # Load configuration
 _config = load_config()

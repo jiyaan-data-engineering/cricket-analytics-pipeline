@@ -164,7 +164,7 @@ resource "google_cloudfunctions2_function" "gcs_dataflow_trigger" {
     source {
       storage_source {
         bucket = google_storage_bucket.cloud_function_source.name
-        object = "placeholder.zip"
+        object = "function.zip"
       }
     }
   }

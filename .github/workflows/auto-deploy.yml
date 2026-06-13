@@ -396,7 +396,7 @@ jobs:
 
       - name: ⚙️ Build Dataflow Template
         run: |
-          TEMPLATE_BUCKET="gs://cricket-analytics-dataflow-templates"
+          TEMPLATE_BUCKET="gs://cricket-analytics-dataflow-templates-${{ secrets.GCP_PROJECT_ID }}"
           IMAGE="us-central1-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/cricket-docker/batting-pipeline:latest"
 
           gcloud dataflow flex-template build "$TEMPLATE_BUCKET/batting-pipeline/metadata" \

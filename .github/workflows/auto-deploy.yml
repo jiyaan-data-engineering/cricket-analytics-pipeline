@@ -601,11 +601,11 @@ jobs:
         run: |
           echo "📋 Verifying BigQuery objects..."
           echo "Raw layer:"
-          bq ls -t cricket_raw
+          bq ls cricket_raw
           echo "Staging layer:"
-          bq ls -t cricket_staging
+          bq ls cricket_staging
           echo "Curated layer:"
-          bq ls -t cricket_curated
+          bq ls cricket_curated
           echo "✅ All tables and views present"
 
       - name: 📊 Final Data Summary

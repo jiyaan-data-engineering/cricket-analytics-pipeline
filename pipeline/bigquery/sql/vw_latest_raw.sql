@@ -9,6 +9,18 @@
 -- ============================================================================
 
 CREATE OR REPLACE VIEW `{PROJECT_ID}.{RAW_DATASET}.vw_latest_raw` AS
+WITH ranked_records AS (
+  SELECT
+    rank,
+    player_id,
+    player_name,
+    country,
+    rating,
+    format,
+    DATE(ingested_at) as ingestion_date,
+    ROW_NUMBER() OVER (PARTITION BY format, DATE(ingested_at) ORDER BY ingested_at DESC) as rn
+  FROM `{PROJECT_ID}.{RAW_DATASET}.batting_rankings`
+)
 SELECT
   rank,
   player_id,
@@ -16,7 +28,6 @@ SELECT
   country,
   rating,
   format,
-  DATE(ingested_at) as ingestion_date,
-  ROW_NUMBER() OVER (PARTITION BY format, DATE(ingested_at) ORDER BY ingested_at DESC) as rn
-FROM `{PROJECT_ID}.{RAW_DATASET}.batting_rankings`
+  ingestion_date
+FROM ranked_records
 WHERE rn <= 100;

@@ -231,13 +231,13 @@ resource "google_bigquery_dataset" "audit_logs" {
 # ============================================================================
 
 resource "google_composer_environment" "cricket_analytics" {
-  name           = "cricket-analytics-composer"
-  region         = var.gcp_region
-  project        = var.gcp_project_id
-  node_count     = 3
-  machine_type   = "n1-standard-4"
-  disk_size_gb   = 30
-  python_version = "3"
+  name            = "cricket-analytics-composer"
+  region          = var.gcp_region
+  project         = var.gcp_project_id
+  node_count      = 3
+  machine_type    = "n1-standard-4"
+  disk_size_gb    = 30
+  python_version  = "3"
 
   config {
     node_config {
@@ -252,13 +252,13 @@ resource "google_composer_environment" "cricket_analytics" {
       }
 
       env_variables = {
-        GCP_PROJECT_ID              = var.gcp_project_id
-        GCP_REGION                  = var.gcp_region
-        BQ_RAW_DATASET              = google_bigquery_dataset.raw.dataset_id
-        BQ_STAGING_DATASET          = google_bigquery_dataset.staging.dataset_id
-        BQ_CURATED_DATASET          = google_bigquery_dataset.curated.dataset_id
-        DATAFLOW_TEMPLATE_BUCKET    = google_storage_bucket.templates.name
-        RAW_BUCKET                  = google_storage_bucket.raw_data.name
+        GCP_PROJECT_ID           = var.gcp_project_id
+        GCP_REGION               = var.gcp_region
+        BQ_RAW_DATASET           = google_bigquery_dataset.raw.dataset_id
+        BQ_STAGING_DATASET       = google_bigquery_dataset.staging.dataset_id
+        BQ_CURATED_DATASET       = google_bigquery_dataset.curated.dataset_id
+        DATAFLOW_TEMPLATE_BUCKET = google_storage_bucket.templates.name
+        RAW_BUCKET               = google_storage_bucket.raw_data.name
       }
 
       pypi_packages = {

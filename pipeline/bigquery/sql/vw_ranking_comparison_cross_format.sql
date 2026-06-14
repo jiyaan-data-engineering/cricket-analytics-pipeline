@@ -26,4 +26,4 @@ INNER JOIN `{PROJECT_ID}.{STAGING_DATASET}.dim_country` c ON fb.country_id = c.c
 INNER JOIN `{PROJECT_ID}.{STAGING_DATASET}.dim_format` f ON fb.format_id = f.format_id
 WHERE DATE(fb.loaded_at) = CURRENT_DATE()
 GROUP BY p.player_name, c.country_name
-ORDER BY p.player_name;
+ORDER BY 1;

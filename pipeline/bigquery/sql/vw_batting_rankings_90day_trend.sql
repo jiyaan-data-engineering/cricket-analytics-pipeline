@@ -30,4 +30,4 @@ INNER JOIN `{PROJECT_ID}.{STAGING_DATASET}.dim_country` c ON fb.country_id = c.c
 INNER JOIN `{PROJECT_ID}.{STAGING_DATASET}.dim_format` f ON fb.format_id = f.format_id
 INNER JOIN `{PROJECT_ID}.{STAGING_DATASET}.dim_date` d ON fb.date_id = d.date_id
 WHERE d.full_date >= DATE_SUB(CURRENT_DATE(), INTERVAL 90 DAY)
-ORDER BY p.player_name, f.format_id, d.full_date;
+ORDER BY 1, 3, 4;

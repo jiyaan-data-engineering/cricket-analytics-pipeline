@@ -21,4 +21,4 @@ SELECT
   last_updated
 FROM `{PROJECT_ID}.{CURATED_DATASET}.vw_batting_rankings_latest`
 WHERE current_rank <= 10
-ORDER BY format_name, rank_position;
+ORDER BY 4, 1;

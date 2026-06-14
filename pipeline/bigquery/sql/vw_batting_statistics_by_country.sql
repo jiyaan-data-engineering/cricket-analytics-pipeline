@@ -25,4 +25,4 @@ INNER JOIN `{PROJECT_ID}.{STAGING_DATASET}.dim_country` c ON fb.country_id = c.c
 INNER JOIN `{PROJECT_ID}.{STAGING_DATASET}.dim_format` f ON fb.format_id = f.format_id
 WHERE fb.rank <= 50 AND DATE(fb.loaded_at) = CURRENT_DATE()
 GROUP BY c.country_name, f.format_name
-ORDER BY c.country_name, f.format_id;
+ORDER BY 1, 2;

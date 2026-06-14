@@ -85,3 +85,22 @@ output "cloud_composer_service_account" {
   value       = google_service_account.cloud_composer.email
   description = "Cloud Composer service account email"
 }
+
+# ============================================================================
+# CLOUD COMPOSER ENVIRONMENT
+# ============================================================================
+
+output "cloud_composer_environment_name" {
+  value       = google_composer_environment.cricket_analytics.name
+  description = "Cloud Composer environment name"
+}
+
+output "cloud_composer_airflow_uri" {
+  value       = google_composer_environment.cricket_analytics.config[0].airflow_uri
+  description = "Airflow web UI URI"
+}
+
+output "cloud_composer_dags_bucket" {
+  value       = google_composer_environment.cricket_analytics.storage_config[0].bucket
+  description = "Cloud Composer DAGs storage bucket"
+}

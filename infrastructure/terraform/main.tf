@@ -246,9 +246,12 @@ resource "google_cloudfunctions2_function" "dataflow_trigger" {
   name        = "cricket-dataflow-trigger"
   location    = var.gcp_region
   description = "Triggered by GCS finalization to launch Dataflow job"
+  project     = var.gcp_project_id
+
   build_config {
     runtime     = "python311"
     entry_point = "process_batting_file"
+
     source {
       storage_source {
         bucket = google_storage_bucket.raw_data.name
@@ -274,8 +277,6 @@ resource "google_cloudfunctions2_function" "dataflow_trigger" {
     }
   }
 
-  project = var.gcp_project_id
-
   depends_on = [
     google_project_service.required_apis["cloudfunctions.googleapis.com"]
   ]
@@ -289,20 +290,23 @@ resource "google_eventarc_trigger" "gcs_to_dataflow" {
   name            = "cricket-gcs-to-dataflow"
   location        = var.gcp_region
   service_account = google_service_account.cloud_function.email
+  project         = var.gcp_project_id
+
   matching_criteria {
     attribute = "type"
     value     = "google.cloud.storage.object.v1.finalized"
   }
+
   matching_criteria {
     attribute = "bucket"
     value     = google_storage_bucket.raw_data.name
   }
+
   destination {
     cloud_function_target {
       function = google_cloudfunctions2_function.dataflow_trigger.id
     }
   }
-  project = var.gcp_project_id
 
   depends_on = [
     google_project_service.required_apis["eventarc.googleapis.com"]
@@ -321,26 +325,31 @@ resource "google_cloud_run_service" "ingestion" {
   template {
     spec {
       service_account_email = google_service_account.cloud_run.email
+      timeout_seconds       = 600
+
       containers {
-        image = "gcr.io/cloud-builders/gke-deploy:stable" # Placeholder - update with actual image
+        image = "gcr.io/cloud-builders/gke-deploy:stable"
+
         env {
           name  = "GCP_PROJECT"
           value = var.gcp_project_id
         }
+
         env {
           name  = "GCP_REGION"
           value = var.gcp_region
         }
+
         env {
           name  = "RAW_BUCKET"
           value = google_storage_bucket.raw_data.name
         }
+
         env {
           name  = "RAPIDAPI_KEY"
-          value = "" # Must be set via CI/CD secrets
+          value = ""
         }
       }
-      timeout_seconds = 600
     }
   }
 
@@ -354,13 +363,13 @@ resource "google_cloud_run_service" "ingestion" {
 # ============================================================================
 
 resource "google_cloud_scheduler_job" "ingestion_trigger" {
-  name            = "cricket-ingestion-daily"
-  description     = "Trigger Cloud Run for daily cricket data ingestion at 06:00 UTC"
-  schedule        = "0 6 * * *"
-  time_zone       = "UTC"
+  name             = "cricket-ingestion-daily"
+  description      = "Trigger Cloud Run for daily cricket data ingestion at 06:00 UTC"
+  schedule         = "0 6 * * *"
+  time_zone        = "UTC"
   attempt_deadline = "320s"
-  region          = var.gcp_region
-  project         = var.gcp_project_id
+  region           = var.gcp_region
+  project          = var.gcp_project_id
 
   http_target {
     uri         = google_cloud_run_service.ingestion.status[0].url

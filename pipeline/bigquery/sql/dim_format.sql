@@ -17,11 +17,16 @@ OPTIONS (
   description="Cricket format dimension (Test, ODI, T20I)"
 );
 
--- Insert format values
-INSERT INTO `{PROJECT_ID}.{STAGING_DATASET}.dim_format`
-  (format_id, format_name, description)
-VALUES
-  (1, 'TEST', 'Test Cricket'),
-  (2, 'ODI', 'One Day International'),
-  (3, 'T20I', 'Twenty20 International')
-ON CONFLICT DO NOTHING;
+-- Merge format values for idempotency
+MERGE `{PROJECT_ID}.{STAGING_DATASET}.dim_format` T
+USING (
+  SELECT 1 as format_id, 'TEST' as format_name, 'Test Cricket' as description
+  UNION ALL
+  SELECT 2, 'ODI', 'One Day International'
+  UNION ALL
+  SELECT 3, 'T20I', 'Twenty20 International'
+) S
+ON T.format_id = S.format_id
+WHEN NOT MATCHED THEN
+  INSERT (format_id, format_name, description)
+  VALUES (S.format_id, S.format_name, S.description);

@@ -8,25 +8,7 @@
 -- Note: Dataset names are placeholders - substitute {STAGING_DATASET} with actual dataset name from config
 -- ============================================================================
 
-CREATE OR REPLACE TABLE `{PROJECT_ID}.{STAGING_DATASET}.dim_date` (
-  date_id INT64 NOT NULL,
-  full_date DATE NOT NULL,
-  year INT64,
-  quarter INT64,
-  month INT64,
-  day INT64,
-  week INT64,
-  day_of_week INT64,
-  day_name STRING,
-  month_name STRING,
-  PRIMARY KEY (date_id) NOT ENFORCED
-)
-OPTIONS (
-  description="Date dimension for time series analysis"
-);
-
--- Generate dates from 2015 to 2035
-INSERT INTO `{PROJECT_ID}.{STAGING_DATASET}.dim_date`
+CREATE OR REPLACE TABLE `{PROJECT_ID}.{STAGING_DATASET}.dim_date` AS
 SELECT
   CAST(FORMAT_DATE('%Y%m%d', d) AS INT64) as date_id,
   d as full_date,

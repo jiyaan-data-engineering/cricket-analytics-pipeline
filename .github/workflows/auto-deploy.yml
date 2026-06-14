@@ -234,19 +234,12 @@ jobs:
             echo "✅ Terraform Apply Completed Successfully"
             APPLY_SUCCESS=true
           else
-            # Remove ANSI color codes for easier parsing
-            CLEAN_LOG=$(cat apply.log | sed 's/\x1B\[[0-9;]*[mK]//g')
+            # Check if ALL errors are idempotent (409/412/404)
+            TOTAL_ERRORS=$(grep -i "Error:" apply.log | wc -l)
+            IDEMPOTENT_ERRORS=$(grep -E "409|412|404|Already Exists|alreadyExists|already own it|duplicate|Constraint.*uniformBucketLevelAccess|Cannot find metric" apply.log | wc -l)
 
-            # Check if failures are only expected errors that don't require action
-            ERROR_COUNT=$(echo "$CLEAN_LOG" | grep -c "^│" || echo "0")
-            CRITICAL_ERRORS=$(echo "$CLEAN_LOG" | grep "^│" | grep -c "Error:" || echo "0")
-
-            # Filter out non-critical errors
-            # 409 = Already Exists (idempotent)
-            # 412 = Constraint violation (bucket configuration)
-            # 404 metrics = Metric not available yet (will appear later)
-            if echo "$CLEAN_LOG" | grep -q "409\|412.*uniformBucketLevelAccess\|404.*metric.*not.*available" || \
-               echo "$CLEAN_LOG" | grep -q "Already Exists\|duplicate\|alreadyExists\|already own it\|Constraint.*storage.uniformBucketLevelAccess\|Cannot find metric"; then
+            # If all errors are idempotent, treat as success
+            if [ $TOTAL_ERRORS -gt 0 ] && [ $IDEMPOTENT_ERRORS -ge $TOTAL_ERRORS ]; then
 
               echo ""
               echo "⚠️  Terraform encountered expected/idempotent errors (non-critical):"

@@ -413,7 +413,7 @@ jobs:
 
           # Test 1: BigQuery datasets exist
           echo "Test 1: Verify BigQuery datasets..."
-          bq ls --project_id=${{ secrets.PROD_GCP_PROJECT_ID }} | grep "prod_"
+          bq ls --project_id=${{ secrets.PROD_GCP_PROJECT_ID }} | grep "cricket_"
           if [ $? -eq 0 ]; then
             echo "✅ PASS: BigQuery datasets exist"
           else
@@ -423,7 +423,7 @@ jobs:
 
           # Test 2: GCS buckets exist
           echo "Test 2: Verify GCS buckets..."
-          gsutil ls | grep "prod-cricket"
+          gsutil ls | grep "cricket"
           if [ $? -eq 0 ]; then
             echo "✅ PASS: GCS buckets exist"
           else

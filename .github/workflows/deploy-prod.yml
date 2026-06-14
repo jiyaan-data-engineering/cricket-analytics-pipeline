@@ -193,7 +193,7 @@ jobs:
           echo "⚠️ REVIEW PLAN CAREFULLY BEFORE APPROVAL"
 
       - name: 📤 Upload Plan Artifact
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: terraform-plan-prod
           path: infrastructure/terraform/prod.tfplan

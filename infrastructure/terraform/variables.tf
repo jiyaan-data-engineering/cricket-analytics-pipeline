@@ -13,3 +13,15 @@ variable "gcp_region" {
   type        = string
   default     = "us-central1"
 }
+
+variable "backup_enabled" {
+  description = "Enable backups for production"
+  type        = bool
+  default     = false
+}
+
+variable "monitoring_enabled" {
+  description = "Enable monitoring for production"
+  type        = bool
+  default     = false
+}

@@ -1,5 +1,5 @@
 -- ============================================================================
--- AUDIT LOGS DATASET & TABLES
+-- AUDIT LOGS DATASET & TABLES 
 -- Pipeline tracking and monitoring for each data pipeline stage
 -- ============================================================================
 

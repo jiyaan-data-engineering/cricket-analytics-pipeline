@@ -75,30 +75,30 @@ resource "google_service_account" "cloud_composer" {
 # GRANT IAM ROLES TO SERVICE ACCOUNTS
 # ============================================================================
 
-# Dataflow SA roles
-resource "google_project_iam_member" "dataflow_bigquery_admin" {
-  project = var.gcp_project_id
-  role    = "roles/bigquery.admin"
-  member  = "serviceAccount:${google_service_account.dataflow.email}"
-}
-
-resource "google_project_iam_member" "dataflow_storage_admin" {
-  project = var.gcp_project_id
-  role    = "roles/storage.admin"
-  member  = "serviceAccount:${google_service_account.dataflow.email}"
-}
-
-resource "google_project_iam_member" "dataflow_admin" {
-  project = var.gcp_project_id
-  role    = "roles/dataflow.admin"
-  member  = "serviceAccount:${google_service_account.dataflow.email}"
-}
-
-resource "google_project_iam_member" "dataflow_worker" {
-  project = var.gcp_project_id
-  role    = "roles/dataflow.worker"
-  member  = "serviceAccount:${google_service_account.dataflow.email}"
-}
+# Dataflow SA roles - commented out as dataflow SA is manually created
+# resource "google_project_iam_member" "dataflow_bigquery_admin" {
+#   project = var.gcp_project_id
+#   role    = "roles/bigquery.admin"
+#   member  = "serviceAccount:${google_service_account.dataflow.email}"
+# }
+#
+# resource "google_project_iam_member" "dataflow_storage_admin" {
+#   project = var.gcp_project_id
+#   role    = "roles/storage.admin"
+#   member  = "serviceAccount:${google_service_account.dataflow.email}"
+# }
+#
+# resource "google_project_iam_member" "dataflow_admin" {
+#   project = var.gcp_project_id
+#   role    = "roles/dataflow.admin"
+#   member  = "serviceAccount:${google_service_account.dataflow.email}"
+# }
+#
+# resource "google_project_iam_member" "dataflow_worker" {
+#   project = var.gcp_project_id
+#   role    = "roles/dataflow.worker"
+#   member  = "serviceAccount:${google_service_account.dataflow.email}"
+# }
 
 # Cloud Function SA roles
 # IAM roles set manually - commented out to avoid service account permission issues

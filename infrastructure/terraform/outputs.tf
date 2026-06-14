@@ -31,10 +31,11 @@ output "temp_bucket" {
   description = "Dataflow temp bucket name"
 }
 
-output "tf_state_bucket" {
-  value       = google_storage_bucket.tf_state.name
-  description = "Terraform state bucket name"
-}
+# Already created manually - commented out
+# output "tf_state_bucket" {
+#   value       = google_storage_bucket.tf_state.name
+#   description = "Terraform state bucket name"
+# }
 
 # ============================================================================
 # BIGQUERY DATASETS
@@ -64,10 +65,11 @@ output "audit_logs_dataset" {
 # SERVICE ACCOUNTS
 # ============================================================================
 
-output "dataflow_service_account" {
-  value       = google_service_account.dataflow.email
-  description = "Dataflow service account email"
-}
+# Already created manually - commented out
+# output "dataflow_service_account" {
+#   value       = google_service_account.dataflow.email
+#   description = "Dataflow service account email"
+# }
 
 output "cloud_function_service_account" {
   value       = google_service_account.cloud_function.email

@@ -1041,4 +1041,3 @@ jobs:
 
           echo ""
           echo "✅ Audit logging complete!"
-          exit 1

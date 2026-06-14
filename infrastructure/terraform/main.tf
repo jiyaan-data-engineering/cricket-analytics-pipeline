@@ -33,7 +33,7 @@ resource "google_project_service" "required_apis" {
     "dataflow.googleapis.com",
     "cloudscheduler.googleapis.com",
     "cloudfunctions.googleapis.com",
-    "cloudrun.googleapis.com",
+    # "cloudrun.googleapis.com",  # Regional constraint
     "composer.googleapis.com",
     "artifactregistry.googleapis.com",
     "eventarc.googleapis.com",
@@ -100,36 +100,37 @@ resource "google_project_iam_member" "dataflow_worker" {
 }
 
 # Cloud Function SA roles
-resource "google_project_iam_member" "cf_dataflow_admin" {
-  project = var.gcp_project_id
-  role    = "roles/dataflow.admin"
-  member  = "serviceAccount:${google_service_account.cloud_function.email}"
-}
-
-resource "google_project_iam_member" "cf_service_account_user" {
-  project = var.gcp_project_id
-  role    = "roles/iam.serviceAccountUser"
-  member  = "serviceAccount:${google_service_account.cloud_function.email}"
-}
-
-# Cloud Composer SA roles
-resource "google_project_iam_member" "composer_bigquery_admin" {
-  project = var.gcp_project_id
-  role    = "roles/bigquery.admin"
-  member  = "serviceAccount:${google_service_account.cloud_composer.email}"
-}
-
-resource "google_project_iam_member" "composer_storage_admin" {
-  project = var.gcp_project_id
-  role    = "roles/storage.admin"
-  member  = "serviceAccount:${google_service_account.cloud_composer.email}"
-}
-
-resource "google_project_iam_member" "composer_dataflow_admin" {
-  project = var.gcp_project_id
-  role    = "roles/dataflow.admin"
-  member  = "serviceAccount:${google_service_account.cloud_composer.email}"
-}
+# IAM roles set manually - commented out to avoid service account permission issues
+# resource "google_project_iam_member" "cf_dataflow_admin" {
+#   project = var.gcp_project_id
+#   role    = "roles/dataflow.admin"
+#   member  = "serviceAccount:${google_service_account.cloud_function.email}"
+# }
+#
+# resource "google_project_iam_member" "cf_service_account_user" {
+#   project = var.gcp_project_id
+#   role    = "roles/iam.serviceAccountUser"
+#   member  = "serviceAccount:${google_service_account.cloud_function.email}"
+# }
+#
+# # Cloud Composer SA roles
+# resource "google_project_iam_member" "composer_bigquery_admin" {
+#   project = var.gcp_project_id
+#   role    = "roles/bigquery.admin"
+#   member  = "serviceAccount:${google_service_account.cloud_composer.email}"
+# }
+#
+# resource "google_project_iam_member" "composer_storage_admin" {
+#   project = var.gcp_project_id
+#   role    = "roles/storage.admin"
+#   member  = "serviceAccount:${google_service_account.cloud_composer.email}"
+# }
+#
+# resource "google_project_iam_member" "composer_dataflow_admin" {
+#   project = var.gcp_project_id
+#   role    = "roles/dataflow.admin"
+#   member  = "serviceAccount:${google_service_account.cloud_composer.email}"
+# }
 
 # ============================================================================
 # CREATE GCS BUCKETS

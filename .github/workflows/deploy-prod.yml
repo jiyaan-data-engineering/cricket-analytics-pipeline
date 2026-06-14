@@ -380,7 +380,14 @@ jobs:
                    s/{RAW_DATASET}/cricket_raw/g; \
                    s/{STAGING_DATASET}/cricket_staging/g; \
                    s/{CURATED_DATASET}/cricket_curated/g" "$file" | \
-              bq query --use_legacy_sql=false --location=us-central1 || true
+              bq query --use_legacy_sql=false --location=us-central1
+              if [ $? -ne 0 ]; then
+                echo "❌ FAILED to execute $file"
+                exit 1
+              fi
+              echo "✅ Successfully executed $file"
+            else
+              echo "⚠️ File not found: $file"
             fi
           done
 

@@ -387,6 +387,110 @@ Clear separation: infrastructure vs pipeline code. Easy to navigate and extend.
 
 ---
 
+## 📊 **Audit Logging (Pipeline Monitoring)**
+
+Comprehensive audit logging tracks all pipeline stage executions, capturing metrics, performance data, and error information.
+
+### **Audit Tables (5 Tables in `cricket_audit_logs` Dataset)**
+
+| Table Name | Purpose | Key Metrics |
+|-----------|---------|-------------|
+| `pipeline_execution_summary` | **Master log** for all 4 pipeline stages | Run ID, Stage #, Status, Records, Success Rate |
+| `api_ingestion_audit_log` | API data fetching from Cricbuzz | Records fetched, GCS path, Retries, Errors |
+| `dataflow_processing_audit_log` | Apache Beam Dataflow job execution | Job ID, Input/Output records, Workers, Duration |
+| `data_transformation_audit_log` | RAW → STAGING SQL transformations | Transformation name, Insert/Update/Delete counts, Data quality |
+| `analytics_views_audit_log` | Curated views creation | View name, Row count, Query cost, Data freshness |
+
+### **What Gets Logged Automatically**
+
+Every time your **scheduled job runs at 06:00 UTC**, all pipeline executions are automatically logged:
+
+```
+execution_run_id: 27496678486 (GitHub workflow run ID)
+execution_date: 2026-06-14 06:00:00 UTC
+
+Stage 1 - API Ingestion
+  ├─ status: SUCCESS
+  ├─ records_fetched: 135
+  ├─ gcs_path: gs://bucket/batting_rankings.csv
+  └─ duration: 5 minutes
+
+Stage 2 - Dataflow Processing
+  ├─ status: SUCCESS
+  ├─ input_records: 135
+  ├─ output_records: 135
+  ├─ worker_count: 2
+  └─ duration: 5 minutes
+
+Stage 3 - Data Transformation (RAW → STAGING)
+  ├─ status: SUCCESS
+  ├─ affected_records: 135
+  ├─ inserts: 0
+  ├─ updates: 135
+  └─ duration: 5 minutes
+
+Stage 4 - Curated Views Creation
+  ├─ status: SUCCESS
+  ├─ view_count: 5 views
+  ├─ total_rows: 675
+  └─ duration: 5 minutes
+```
+
+### **Query Your Audit Logs**
+
+**View all recent pipeline executions:**
+```sql
+SELECT
+  execution_run_id,
+  pipeline_stage_name,
+  status,
+  total_records_processed,
+  overall_success_rate,
+  execution_date
+FROM `cricbuzz-satish-dev.cricket_audit_logs.pipeline_execution_summary`
+WHERE DATE(execution_date) >= DATE_SUB(CURRENT_DATE(), INTERVAL 7 DAY)
+ORDER BY execution_date DESC, pipeline_stage_number
+LIMIT 50
+```
+
+**Pipeline success rate (last 30 days):**
+```sql
+SELECT
+  pipeline_stage_name,
+  DATE(execution_date) as date,
+  COUNT(*) as total_runs,
+  COUNTIF(status = 'SUCCESS') as successful_runs,
+  ROUND(COUNTIF(status = 'SUCCESS') / COUNT(*) * 100, 2) as success_rate_percent
+FROM `cricbuzz-satish-dev.cricket_audit_logs.pipeline_execution_summary`
+WHERE DATE(execution_date) >= DATE_SUB(CURRENT_DATE(), INTERVAL 30 DAY)
+GROUP BY pipeline_stage_name, date
+ORDER BY date DESC
+```
+
+**API ingestion audit log:**
+```sql
+SELECT
+  run_id,
+  status,
+  total_records_fetched,
+  gcs_output_path,
+  execution_duration_seconds,
+  error_message
+FROM `cricbuzz-satish-dev.cricket_audit_logs.api_ingestion_audit_log`
+ORDER BY execution_date DESC
+LIMIT 20
+```
+
+### **Audit Logging Features**
+
+✅ **Automatic**: Every workflow run logs all pipeline stages  
+✅ **Comprehensive**: Captures execution times, records, errors, and metrics  
+✅ **Queryable**: BigQuery tables optimized with partitioning & clustering  
+✅ **Non-blocking**: Logging failures don't block deployment  
+✅ **Timestamp**: All times in UTC for consistency  
+
+---
+
 ## 📋 Deployment Details (2026-06-13)
 
 ### What's Been Deployed ✅

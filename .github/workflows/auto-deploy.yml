@@ -335,6 +335,7 @@ jobs:
           cd pipeline/bigquery/sql
 
           SQL_FILES=(
+            "00_create_audit_logs.sql"
             "raw_batting_rankings.sql"
             "vw_latest_raw.sql"
             "dim_player.sql"

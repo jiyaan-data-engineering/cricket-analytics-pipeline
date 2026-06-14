@@ -4,7 +4,7 @@
 -- ============================================================================
 
 -- Create audit logs dataset
-CREATE SCHEMA IF NOT EXISTS `{project_id}.cricket_audit_logs`
+CREATE SCHEMA IF NOT EXISTS `{PROJECT_ID}.cricket_audit_logs`
 OPTIONS(
   description="Audit logs for cricket analytics pipeline execution and monitoring",
   location="us-central1"
@@ -15,7 +15,7 @@ OPTIONS(
 -- Tracks: Cricbuzz API data fetching and initial data loading
 -- ============================================================================
 
-CREATE OR REPLACE TABLE `{project_id}.cricket_audit_logs.api_ingestion_audit_log` (
+CREATE OR REPLACE TABLE `{PROJECT_ID}.cricket_audit_logs.api_ingestion_audit_log` (
   run_id STRING NOT NULL,
   pipeline_stage STRING NOT NULL DEFAULT 'api_ingestion',
   execution_date TIMESTAMP NOT NULL,
@@ -59,7 +59,7 @@ CLUSTER BY status, DATE(execution_date);
 -- Tracks: Apache Beam Dataflow job execution and data processing
 -- ============================================================================
 
-CREATE OR REPLACE TABLE `{project_id}.cricket_audit_logs.dataflow_processing_audit_log` (
+CREATE OR REPLACE TABLE `{PROJECT_ID}.cricket_audit_logs.dataflow_processing_audit_log` (
   run_id STRING NOT NULL,
   pipeline_stage STRING NOT NULL DEFAULT 'dataflow_processing',
   execution_date TIMESTAMP NOT NULL,
@@ -114,7 +114,7 @@ CLUSTER BY status, dataflow_job_id;
 -- Tracks: BigQuery SQL transformations (RAW → STAGING layer)
 -- ============================================================================
 
-CREATE OR REPLACE TABLE `{project_id}.cricket_audit_logs.data_transformation_audit_log` (
+CREATE OR REPLACE TABLE `{PROJECT_ID}.cricket_audit_logs.data_transformation_audit_log` (
   run_id STRING NOT NULL,
   pipeline_stage STRING NOT NULL DEFAULT 'data_transformation',
   execution_date TIMESTAMP NOT NULL,
@@ -166,7 +166,7 @@ CLUSTER BY status, transformation_name;
 -- Tracks: Curated analytics views creation and data freshness
 -- ============================================================================
 
-CREATE OR REPLACE TABLE `{project_id}.cricket_audit_logs.analytics_views_audit_log` (
+CREATE OR REPLACE TABLE `{PROJECT_ID}.cricket_audit_logs.analytics_views_audit_log` (
   run_id STRING NOT NULL,
   pipeline_stage STRING NOT NULL DEFAULT 'analytics_views',
   execution_date TIMESTAMP NOT NULL,
@@ -218,7 +218,7 @@ CLUSTER BY status, view_name;
 -- Master log aggregating all pipeline stages
 -- ============================================================================
 
-CREATE OR REPLACE TABLE `{project_id}.cricket_audit_logs.pipeline_execution_summary` (
+CREATE OR REPLACE TABLE `{PROJECT_ID}.cricket_audit_logs.pipeline_execution_summary` (
   execution_run_id STRING NOT NULL,
   pipeline_stage_number INT64,  -- 1, 2, 3, 4
   pipeline_stage_name STRING,
@@ -257,7 +257,7 @@ CLUSTER BY status, pipeline_stage_name;
 -- ============================================================================
 
 -- View: Pipeline Success Rate (Last 30 days)
-CREATE OR REPLACE VIEW `{project_id}.cricket_audit_logs.vw_pipeline_success_metrics` AS
+CREATE OR REPLACE VIEW `{PROJECT_ID}.cricket_audit_logs.vw_pipeline_success_metrics` AS
 SELECT
   pipeline_stage_name,
   DATE(execution_date) as execution_date,
@@ -266,20 +266,20 @@ SELECT
   COUNTIF(status = 'FAILED') as failed_runs,
   ROUND(COUNTIF(status = 'SUCCESS') / COUNT(*) * 100, 2) as success_rate_percent,
   ROUND(AVG(total_execution_duration_seconds), 2) as avg_execution_duration_seconds
-FROM `{project_id}.cricket_audit_logs.pipeline_execution_summary`
+FROM `{PROJECT_ID}.cricket_audit_logs.pipeline_execution_summary`
 WHERE DATE(execution_date) >= DATE_SUB(CURRENT_DATE(), INTERVAL 30 DAY)
 GROUP BY pipeline_stage_name, execution_date
 ORDER BY execution_date DESC, success_rate_percent DESC;
 
 -- View: Data Quality Scorecard
-CREATE OR REPLACE VIEW `{project_id}.cricket_audit_logs.vw_data_quality_scorecard` AS
+CREATE OR REPLACE VIEW `{PROJECT_ID}.cricket_audit_logs.vw_data_quality_scorecard` AS
 SELECT
   DATE(execution_date) as execution_date,
   'API Ingestion' as component,
   total_records_fetched as records_processed,
   error_record_count as errors,
   ROUND(((total_records_fetched - COALESCE(error_record_count, 0)) / NULLIF(total_records_fetched, 0) * 100), 2) as quality_score
-FROM `{project_id}.cricket_audit_logs.api_ingestion_audit_log`
+FROM `{PROJECT_ID}.cricket_audit_logs.api_ingestion_audit_log`
 WHERE status = 'SUCCESS'
 UNION ALL
 SELECT
@@ -288,7 +288,7 @@ SELECT
   processed_record_count,
   error_record_count,
   ROUND(((processed_record_count - error_record_count) / NULLIF(processed_record_count, 0) * 100), 2)
-FROM `{project_id}.cricket_audit_logs.dataflow_processing_audit_log`
+FROM `{PROJECT_ID}.cricket_audit_logs.dataflow_processing_audit_log`
 WHERE status = 'SUCCESS'
 UNION ALL
 SELECT
@@ -297,7 +297,7 @@ SELECT
   total_affected_record_count,
   constraint_violation_count,
   ROUND(((total_affected_record_count - constraint_violation_count) / NULLIF(total_affected_record_count, 0) * 100), 2)
-FROM `{project_id}.cricket_audit_logs.data_transformation_audit_log`
+FROM `{PROJECT_ID}.cricket_audit_logs.data_transformation_audit_log`
 WHERE status = 'SUCCESS'
 UNION ALL
 SELECT
@@ -306,12 +306,12 @@ SELECT
   view_row_count,
   0,
   100.0
-FROM `{project_id}.cricket_audit_logs.analytics_views_audit_log`
+FROM `{PROJECT_ID}.cricket_audit_logs.analytics_views_audit_log`
 WHERE status = 'SUCCESS'
 ORDER BY execution_date DESC;
 
 -- View: Pipeline Performance Report
-CREATE OR REPLACE VIEW `{project_id}.cricket_audit_logs.vw_pipeline_performance_report` AS
+CREATE OR REPLACE VIEW `{PROJECT_ID}.cricket_audit_logs.vw_pipeline_performance_report` AS
 SELECT
   pipeline_stage_name,
   COUNT(*) as total_executions,
@@ -319,7 +319,7 @@ SELECT
   ROUND(MIN(total_execution_duration_seconds), 2) as min_duration_seconds,
   ROUND(MAX(total_execution_duration_seconds), 2) as max_duration_seconds,
   ROUND(STDDEV(total_execution_duration_seconds), 2) as stddev_duration_seconds
-FROM `{project_id}.cricket_audit_logs.pipeline_execution_summary`
+FROM `{PROJECT_ID}.cricket_audit_logs.pipeline_execution_summary`
 WHERE DATE(execution_date) >= DATE_SUB(CURRENT_DATE(), INTERVAL 30 DAY)
   AND status = 'SUCCESS'
 GROUP BY pipeline_stage_name

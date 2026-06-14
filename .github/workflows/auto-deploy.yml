@@ -676,6 +676,9 @@ jobs:
     needs: [verify-deployment]
     if: always()
     steps:
+      - name: 📥 Checkout code
+        uses: actions/checkout@v4
+
       - name: 📧 Send Success Email (Python SMTP)
         if: needs.verify-deployment.result == 'success'
         env:

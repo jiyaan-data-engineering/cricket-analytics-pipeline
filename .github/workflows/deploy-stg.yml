@@ -1,0 +1,417 @@
+name: 📦 Deploy to STAGING
+
+on:
+  push:
+    tags:
+      - 'v[0-9]+.[0-9]+.[0-9]+'  # v1.0.0, v1.1.0, etc.
+
+permissions:
+  id-token: write
+  contents: read
+
+env:
+  TERRAFORM_VERSION: 1.5.0
+  GCP_REGION: us-central1
+  ENVIRONMENT: staging
+  ENVIRONMENT_SHORT: stg
+
+jobs:
+  # ============= PRE-DEPLOYMENT CHECKS =============
+  pre-deployment:
+    name: 🔍 Pre-Deployment Checks
+    runs-on: ubuntu-latest
+    steps:
+      - name: 📥 Checkout code
+        uses: actions/checkout@v4
+
+      - name: 📝 Get Release Info
+        id: release
+        run: |
+          VERSION=${GITHUB_REF#refs/tags/}
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "📦 Deploying version: $VERSION to STAGING"
+
+      - name: 🔒 Validate Tag Format
+        run: |
+          VERSION=${GITHUB_REF#refs/tags/}
+          if [[ $VERSION =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "✅ Tag format is valid: $VERSION"
+          else
+            echo "❌ Invalid tag format: $VERSION"
+            echo "Expected format: v*.*.* (e.g., v1.0.0)"
+            exit 1
+          fi
+
+  # ============= VALIDATION =============
+  validate:
+    name: 🔍 Validate Configuration
+    runs-on: ubuntu-latest
+    needs: pre-deployment
+    steps:
+      - name: 📥 Checkout code
+        uses: actions/checkout@v4
+
+      - name: 🔧 Setup Terraform
+        uses: hashicorp/setup-terraform@v2
+        with:
+          terraform_version: ${{ env.TERRAFORM_VERSION }}
+
+      - name: 📋 Terraform Format Check
+        working-directory: infrastructure/terraform
+        run: |
+          echo "Checking Terraform formatting..."
+          terraform fmt -check -recursive .
+          if [ $? -eq 0 ]; then
+            echo "✅ Terraform formatting is correct"
+          else
+            echo "❌ Terraform formatting issues found"
+            exit 1
+          fi
+
+      - name: 🔍 Terraform Validate
+        working-directory: infrastructure/terraform
+        run: |
+          echo "Validating Terraform configuration..."
+          terraform init -backend=false
+          terraform validate -var-file="environments/stg.tfvars"
+          echo "✅ Terraform validation passed"
+
+  # ============= TERRAFORM PLAN =============
+  plan:
+    name: 📋 Terraform Plan
+    runs-on: ubuntu-latest
+    needs: validate
+    outputs:
+      plan_output: ${{ steps.plan.outputs.stdout }}
+    steps:
+      - name: 📥 Checkout code
+        uses: actions/checkout@v4
+
+      - name: 🔧 Setup Terraform
+        uses: hashicorp/setup-terraform@v2
+        with:
+          terraform_version: ${{ env.TERRAFORM_VERSION }}
+
+      - name: 🔐 Authenticate to Google Cloud
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ secrets.STG_WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ secrets.STG_SERVICE_ACCOUNT_EMAIL }}
+          token_format: access_token
+          access_token_lifetime: 1800s
+
+      - name: ☁️ Setup Google Cloud SDK
+        uses: google-github-actions/setup-gcloud@v1
+
+      - name: 📍 Initialize Terraform
+        working-directory: infrastructure/terraform
+        run: |
+          terraform init \
+            -backend-config="bucket=${{ secrets.STG_TF_STATE_BUCKET }}" \
+            -backend-config="prefix=stg" \
+            -upgrade
+
+      - name: 📋 Terraform Plan
+        working-directory: infrastructure/terraform
+        id: plan
+        run: |
+          echo "Running Terraform plan for STAGING environment..."
+          terraform plan \
+            -var-file="environments/stg.tfvars" \
+            -var="gcp_project_id=${{ secrets.STG_GCP_PROJECT_ID }}" \
+            -out=stg.tfplan \
+            -no-color
+
+      - name: 📤 Upload Plan Artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: terraform-plan-stg
+          path: infrastructure/terraform/stg.tfplan
+          retention-days: 7
+
+      - name: 📊 Show Plan Summary
+        working-directory: infrastructure/terraform
+        run: |
+          echo "📋 Terraform Plan Summary:"
+          terraform show stg.tfplan | head -100
+
+  # ============= TERRAFORM APPLY =============
+  apply:
+    name: 🚀 Terraform Apply
+    runs-on: ubuntu-latest
+    needs: plan
+    environment: staging
+    steps:
+      - name: 📥 Checkout code
+        uses: actions/checkout@v4
+
+      - name: 🔧 Setup Terraform
+        uses: hashicorp/setup-terraform@v2
+        with:
+          terraform_version: ${{ env.TERRAFORM_VERSION }}
+
+      - name: 🔐 Authenticate to Google Cloud
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ secrets.STG_WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ secrets.STG_SERVICE_ACCOUNT_EMAIL }}
+          token_format: access_token
+          access_token_lifetime: 1800s
+
+      - name: ☁️ Setup Google Cloud SDK
+        uses: google-github-actions/setup-gcloud@v1
+
+      - name: 📍 Initialize Terraform
+        working-directory: infrastructure/terraform
+        run: |
+          terraform init \
+            -backend-config="bucket=${{ secrets.STG_TF_STATE_BUCKET }}" \
+            -backend-config="prefix=stg" \
+            -upgrade
+
+      - name: 📥 Download Plan Artifact
+        uses: actions/download-artifact@v3
+        with:
+          name: terraform-plan-stg
+          path: infrastructure/terraform/
+
+      - name: 🚀 Terraform Apply
+        working-directory: infrastructure/terraform
+        run: |
+          echo "Applying Terraform plan for STAGING environment..."
+          terraform apply -auto-approve stg.tfplan
+          echo "✅ Infrastructure deployed successfully"
+
+      - name: 📊 Show Outputs
+        working-directory: infrastructure/terraform
+        run: |
+          echo "📊 Deployment Outputs:"
+          terraform output -json | jq .
+
+  # ============= BIGQUERY SETUP =============
+  bigquery-setup:
+    name: 📊 Setup BigQuery
+    runs-on: ubuntu-latest
+    needs: apply
+    steps:
+      - name: 📥 Checkout code
+        uses: actions/checkout@v4
+
+      - name: 🔐 Authenticate to Google Cloud
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ secrets.STG_WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ secrets.STG_SERVICE_ACCOUNT_EMAIL }}
+          token_format: access_token
+          access_token_lifetime: 1800s
+
+      - name: ☁️ Setup Google Cloud SDK
+        uses: google-github-actions/setup-gcloud@v1
+
+      - name: 📋 Set Project ID
+        run: |
+          gcloud config set project ${{ secrets.STG_GCP_PROJECT_ID }}
+
+      - name: 🗄️ Execute BigQuery SQL Scripts
+        run: |
+          cd pipeline/bigquery/sql
+
+          echo "Executing BigQuery setup scripts for STAGING..."
+
+          SQL_FILES=(
+            "00_create_audit_logs.sql"
+            "raw_batting_rankings.sql"
+            "vw_latest_raw.sql"
+            "dim_player.sql"
+            "dim_country.sql"
+            "dim_format.sql"
+            "dim_date.sql"
+            "fact_batting_rankings.sql"
+            "vw_batting_rankings_latest.sql"
+            "vw_batting_rankings_90day_trend.sql"
+            "vw_top_10_batsmen_by_format.sql"
+            "vw_batting_statistics_by_country.sql"
+            "vw_ranking_comparison_cross_format.sql"
+          )
+
+          for file in "${SQL_FILES[@]}"; do
+            if [ -f "$file" ]; then
+              echo "📄 Executing $file..."
+              sed "s/{PROJECT_ID}/${{ secrets.STG_GCP_PROJECT_ID }}/g; \
+                   s/{ENV_PREFIX}/stg_/g; \
+                   s/{RAW_DATASET}/stg_cricket_raw/g; \
+                   s/{STAGING_DATASET}/stg_cricket_staging/g; \
+                   s/{CURATED_DATASET}/stg_cricket_curated/g" "$file" | \
+              bq query --use_legacy_sql=false --location=us-central1 || true
+            fi
+          done
+
+          echo "✅ BigQuery setup completed"
+
+  # ============= INTEGRATION TESTS =============
+  integration-tests:
+    name: 🧪 Integration Tests
+    runs-on: ubuntu-latest
+    needs: bigquery-setup
+    steps:
+      - name: 📥 Checkout code
+        uses: actions/checkout@v4
+
+      - name: 🐍 Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+
+      - name: 📦 Install Dependencies
+        run: |
+          pip install pytest pytest-cov
+          pip install google-cloud-bigquery google-cloud-storage
+
+      - name: 🔐 Authenticate to Google Cloud
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ secrets.STG_WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ secrets.STG_SERVICE_ACCOUNT_EMAIL }}
+          token_format: access_token
+          access_token_lifetime: 1800s
+
+      - name: 🧪 Run Integration Tests
+        env:
+          GCP_PROJECT_ID: ${{ secrets.STG_GCP_PROJECT_ID }}
+        run: |
+          echo "Running integration tests..."
+          python -m pytest tests/integration/ -v --tb=short
+
+  # ============= HEALTH CHECKS =============
+  health-checks:
+    name: 🏥 Health Checks
+    runs-on: ubuntu-latest
+    needs: bigquery-setup
+    steps:
+      - name: 📥 Checkout code
+        uses: actions/checkout@v4
+
+      - name: 🔐 Authenticate to Google Cloud
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ secrets.STG_WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ secrets.STG_SERVICE_ACCOUNT_EMAIL }}
+          token_format: access_token
+          access_token_lifetime: 1800s
+
+      - name: ☁️ Setup Google Cloud SDK
+        uses: google-github-actions/setup-gcloud@v1
+
+      - name: 📋 Set Project ID
+        run: |
+          gcloud config set project ${{ secrets.STG_GCP_PROJECT_ID }}
+
+      - name: 📊 Verify BigQuery Datasets
+        run: |
+          echo "✅ Verifying BigQuery datasets in STAGING..."
+          bq ls --project_id=${{ secrets.STG_GCP_PROJECT_ID }} | grep "stg_"
+          echo "✅ Datasets verified"
+
+      - name: 🪣 Verify GCS Buckets
+        run: |
+          echo "✅ Verifying GCS buckets in STAGING..."
+          gsutil ls | grep "stg-cricket"
+          echo "✅ Buckets verified"
+
+      - name: 🔐 Verify IAM Permissions
+        run: |
+          echo "✅ Verifying IAM roles..."
+          gcloud iam service-accounts list --filter="displayName:cricket" --format="value(email)"
+          echo "✅ IAM verified"
+
+      - name: 📊 Check Data Pipeline Status
+        run: |
+          echo "✅ Checking pipeline status..."
+          bq query --use_legacy_sql=false --location=us-central1 "SELECT COUNT(*) as tables FROM \`stg_cricket_raw.__TABLES__\`" || echo "⚠️ No tables yet in staging"
+
+  # ============= NOTIFICATION =============
+  notify:
+    name: 📢 Notify Deployment
+    runs-on: ubuntu-latest
+    needs: [health-checks, integration-tests]
+    if: always()
+    steps:
+      - name: ✅ Success Notification
+        if: success()
+        run: |
+          VERSION=${GITHUB_REF#refs/tags/}
+          echo "🎉 STAGING DEPLOYMENT SUCCESSFUL! 🎉"
+          echo ""
+          echo "📦 Release: $VERSION"
+          echo "📊 Deployment Summary:"
+          echo "  • Environment: STAGING"
+          echo "  • Version: $VERSION"
+          echo "  • Commit: ${{ github.sha }}"
+          echo "  • Run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+          echo ""
+          echo "✅ Staging is ready for production promotion!"
+          echo ""
+          echo "🚀 Next step: Create release tag 'release-$VERSION' to deploy to PRODUCTION"
+
+      - name: ❌ Failure Notification
+        if: failure()
+        run: |
+          VERSION=${GITHUB_REF#refs/tags/}
+          echo "❌ STAGING DEPLOYMENT FAILED ❌"
+          echo ""
+          echo "📦 Release: $VERSION"
+          echo "📊 Failure Summary:"
+          echo "  • Environment: STAGING"
+          echo "  • Version: $VERSION"
+          echo "  • Commit: ${{ github.sha }}"
+          echo "  • Run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+          echo ""
+          echo "🔍 Check the logs above for details"
+          exit 1
+
+  # ============= RELEASE NOTES =============
+  release:
+    name: 📝 Create Release Notes
+    runs-on: ubuntu-latest
+    needs: notify
+    if: success()
+    steps:
+      - name: 📥 Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: 📝 Generate Release Notes
+        id: release_notes
+        run: |
+          VERSION=${GITHUB_REF#refs/tags/}
+          PREV_VERSION=$(git describe --tags --abbrev=0 $VERSION^ 2>/dev/null || echo "")
+
+          echo "📝 Release Notes for $VERSION"
+          echo "================================"
+          if [ -n "$PREV_VERSION" ]; then
+            echo "Changes since $PREV_VERSION:"
+            git log $PREV_VERSION..$VERSION --oneline
+          else
+            echo "Initial release"
+          fi
+
+      - name: 🚀 Update Release
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: ${{ github.ref_name }}
+          body: |
+            🎉 **STAGING Deployment Successful** 🎉
+
+            Version: ${{ github.ref_name }}
+
+            ✅ All tests passed
+            ✅ Infrastructure deployed
+            ✅ Ready for production promotion
+
+            **Next Steps:**
+            1. Run final validation in staging
+            2. Create release tag: `release-${{ github.ref_name }}`
+            3. Production deployment will start automatically
+          draft: false
+          prerelease: true

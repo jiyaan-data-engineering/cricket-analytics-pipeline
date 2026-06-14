@@ -234,16 +234,19 @@ jobs:
             echo "✅ Terraform Apply Completed Successfully"
             APPLY_SUCCESS=true
           else
+            # Remove ANSI color codes for easier parsing
+            CLEAN_LOG=$(cat apply.log | sed 's/\x1B\[[0-9;]*[mK]//g')
+
             # Check if failures are only expected errors that don't require action
-            ERROR_COUNT=$(grep -c "^│" apply.log || echo "0")
-            CRITICAL_ERRORS=$(grep "^│" apply.log | grep -c "Error:" || echo "0")
+            ERROR_COUNT=$(echo "$CLEAN_LOG" | grep -c "^│" || echo "0")
+            CRITICAL_ERRORS=$(echo "$CLEAN_LOG" | grep "^│" | grep -c "Error:" || echo "0")
 
             # Filter out non-critical errors
             # 409 = Already Exists (idempotent)
             # 412 = Constraint violation (bucket configuration)
             # 404 metrics = Metric not available yet (will appear later)
-            if grep -q "409\|412.*uniformBucketLevelAccess\|404.*metric.*not.*available" apply.log || \
-               grep -q "Already Exists\|duplicate\|alreadyExists\|already own it\|Constraint.*storage.uniformBucketLevelAccess\|Cannot find metric" apply.log; then
+            if echo "$CLEAN_LOG" | grep -q "409\|412.*uniformBucketLevelAccess\|404.*metric.*not.*available" || \
+               echo "$CLEAN_LOG" | grep -q "Already Exists\|duplicate\|alreadyExists\|already own it\|Constraint.*storage.uniformBucketLevelAccess\|Cannot find metric"; then
 
               echo ""
               echo "⚠️  Terraform encountered expected/idempotent errors (non-critical):"

@@ -376,10 +376,10 @@ jobs:
             if [ -f "$file" ]; then
               echo "📄 Executing $file..."
               sed "s/{PROJECT_ID}/${{ secrets.PROD_GCP_PROJECT_ID }}/g; \
-                   s/{ENV_PREFIX}/prod_/g; \
-                   s/{RAW_DATASET}/prod_cricket_raw/g; \
-                   s/{STAGING_DATASET}/prod_cricket_staging/g; \
-                   s/{CURATED_DATASET}/prod_cricket_curated/g" "$file" | \
+                   s/{ENV_PREFIX}//g; \
+                   s/{RAW_DATASET}/cricket_raw/g; \
+                   s/{STAGING_DATASET}/cricket_staging/g; \
+                   s/{CURATED_DATASET}/cricket_curated/g" "$file" | \
               bq query --use_legacy_sql=false --location=us-central1 || true
             fi
           done

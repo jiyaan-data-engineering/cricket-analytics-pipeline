@@ -15,8 +15,7 @@ CREATE OR REPLACE TABLE `{PROJECT_ID}.{STAGING_DATASET}.dim_country` (
   PRIMARY KEY (country_id) NOT ENFORCED
 )
 OPTIONS (
-  description="Country dimension for cricket teams",
-  require_partition_filter=FALSE
+  description="Country dimension for cricket teams"
 );
 
 -- Merge logic to upsert country data

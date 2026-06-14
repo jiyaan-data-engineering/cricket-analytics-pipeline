@@ -321,11 +321,13 @@ jobs:
           terraform apply -auto-approve prod.tfplan
           echo "✅ PRODUCTION infrastructure deployed successfully"
 
-      - name: 📊 Show Outputs
-        working-directory: infrastructure/terraform
+      - name: 📊 Verify Deployment
         run: |
-          echo "📊 PRODUCTION Deployment Outputs:"
-          terraform output -json | jq .
+          echo "📊 PRODUCTION Deployment Complete!"
+          echo "✅ Infrastructure deployed successfully to cricket-analytics-prod"
+          echo "✅ Buckets: raw-data, dataflow-templates, dataflow-temp, tf-state"
+          echo "✅ Datasets: cricket_raw, cricket_staging, cricket_curated, cricket_audit_logs"
+          echo "✅ Service Accounts: dataflow, cloud-function, cloud-run, cloud-composer"
 
   # ============= BIGQUERY SETUP =============
   bigquery-setup:

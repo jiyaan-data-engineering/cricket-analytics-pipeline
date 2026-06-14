@@ -1,316 +1,253 @@
 # ============================================================================
-# Terraform Configuration - Cricket Analytics Pipeline
-# Creates complete GCP infrastructure
-# All resource names from variables.tf
+# MULTI-ENVIRONMENT MAIN CONFIGURATION
+# Uses modules and environment-specific variables
 # ============================================================================
 
 terraform {
-  required_version = ">= 1.0"
+  required_version = ">= 1.5.0"
+
   required_providers {
     google = {
       source  = "hashicorp/google"
       version = "~> 5.0"
     }
   }
+
+  # Backend configured per environment
+  # Use: terraform init -backend-config="bucket=cricket-tf-state" \
+  #                      -backend-config="prefix=dev"
+  backend "gcs" {
+    # Bucket is specified via -backend-config flag during init
+    # Each environment has its own state file in different prefix
+  }
 }
 
 provider "google" {
   project = var.gcp_project_id
   region  = var.gcp_region
+  zone    = var.gcp_zone
 }
 
 # ============================================================================
-# ENABLE REQUIRED GCP APIS
+# BIGQUERY MODULE
+# ============================================================================
+
+module "bigquery" {
+  source = "./modules/bigquery"
+
+  project_id               = var.gcp_project_id
+  environment              = var.environment
+  location                 = var.bq_location
+
+  raw_dataset_id           = local.raw_dataset
+  staging_dataset_id       = local.staging_dataset
+  curated_dataset_id       = local.curated_dataset
+  audit_dataset_id         = local.audit_dataset
+
+  service_account_email    = google_service_account.dataflow.email
+  table_expiration_ms      = var.bq_dataset_expiration_days != null ? var.bq_dataset_expiration_days * 86400000 : null
+  raw_partition_expiration_ms = var.raw_table_partition_expiration_days * 86400000
+
+  labels                   = local.resource_labels
+}
+
+# ============================================================================
+# GCS MODULE
+# ============================================================================
+
+module "gcs" {
+  source = "./modules/gcs"
+
+  project_id                      = var.gcp_project_id
+  location                        = var.gcs_location
+  storage_class                   = var.gcs_storage_class
+  versioning_enabled              = var.gcs_versioning_enabled
+  force_destroy                   = local.is_dev  # Only allow destroy in dev
+
+  raw_data_bucket_name            = local.raw_data_bucket
+  dataflow_template_bucket_name   = local.dataflow_template_bucket
+  dataflow_temp_bucket_name       = local.dataflow_temp_bucket
+  tf_state_bucket_name            = local.tf_state_bucket
+
+  labels                          = local.resource_labels
+}
+
+# ============================================================================
+# SERVICE ACCOUNTS
+# ============================================================================
+
+resource "google_service_account" "dataflow" {
+  account_id   = var.dataflow_service_account_name
+  display_name = "Cricket Analytics Dataflow SA (${var.environment})"
+  description  = "Service account for Dataflow pipelines in ${var.environment}"
+}
+
+resource "google_service_account" "cloud_function" {
+  account_id   = var.cloud_function_service_account_name
+  display_name = "Cricket Analytics Cloud Function SA (${var.environment})"
+  description  = "Service account for Cloud Functions in ${var.environment}"
+}
+
+resource "google_service_account" "cloud_run" {
+  account_id   = var.cloud_run_service_account_name
+  display_name = "Cricket Analytics Cloud Run SA (${var.environment})"
+  description  = "Service account for Cloud Run in ${var.environment}"
+}
+
+resource "google_service_account" "cloud_composer" {
+  account_id   = var.cloud_composer_service_account_name
+  display_name = "Cricket Analytics Cloud Composer SA (${var.environment})"
+  description  = "Service account for Cloud Composer in ${var.environment}"
+}
+
+# ============================================================================
+# IAM ROLES - Dataflow Service Account
+# ============================================================================
+
+resource "google_project_iam_member" "dataflow_bigquery_admin" {
+  project = var.gcp_project_id
+  role    = "roles/bigquery.admin"
+  member  = "serviceAccount:${google_service_account.dataflow.email}"
+}
+
+resource "google_project_iam_member" "dataflow_storage_admin" {
+  project = var.gcp_project_id
+  role    = "roles/storage.admin"
+  member  = "serviceAccount:${google_service_account.dataflow.email}"
+}
+
+resource "google_project_iam_member" "dataflow_dataflow_admin" {
+  project = var.gcp_project_id
+  role    = "roles/dataflow.admin"
+  member  = "serviceAccount:${google_service_account.dataflow.email}"
+}
+
+resource "google_project_iam_member" "dataflow_compute_worker" {
+  project = var.gcp_project_id
+  role    = "roles/compute.instanceServiceAccount"
+  member  = "serviceAccount:${google_service_account.dataflow.email}"
+}
+
+# ============================================================================
+# IAM ROLES - Cloud Function Service Account
+# ============================================================================
+
+resource "google_project_iam_member" "cloud_function_dataflow_admin" {
+  project = var.gcp_project_id
+  role    = "roles/dataflow.admin"
+  member  = "serviceAccount:${google_service_account.cloud_function.email}"
+}
+
+resource "google_project_iam_member" "cloud_function_iam_serviceaccountuser" {
+  project = var.gcp_project_id
+  role    = "roles/iam.serviceAccountUser"
+  member  = "serviceAccount:${google_service_account.cloud_function.email}"
+}
+
+# ============================================================================
+# IAM ROLES - Cloud Composer Service Account
+# ============================================================================
+
+resource "google_project_iam_member" "cloud_composer_bigquery_admin" {
+  project = var.gcp_project_id
+  role    = "roles/bigquery.admin"
+  member  = "serviceAccount:${google_service_account.cloud_composer.email}"
+}
+
+resource "google_project_iam_member" "cloud_composer_storage_admin" {
+  project = var.gcp_project_id
+  role    = "roles/storage.admin"
+  member  = "serviceAccount:${google_service_account.cloud_composer.email}"
+}
+
+resource "google_project_iam_member" "cloud_composer_dataflow_admin" {
+  project = var.gcp_project_id
+  role    = "roles/dataflow.admin"
+  member  = "serviceAccount:${google_service_account.cloud_composer.email}"
+}
+
+# ============================================================================
+# ENABLE REQUIRED GCP APIs
 # ============================================================================
 
 resource "google_project_service" "required_apis" {
   for_each = toset([
-    "storage.googleapis.com",
     "bigquery.googleapis.com",
+    "storage-api.googleapis.com",
     "dataflow.googleapis.com",
-    "cloudfunctions.googleapis.com",
     "cloudscheduler.googleapis.com",
+    "cloudfunctions.googleapis.com",
+    "cloudrun.googleapis.com",
+    "composer.googleapis.com",
     "artifactregistry.googleapis.com",
     "eventarc.googleapis.com",
     "logging.googleapis.com",
-    "compute.googleapis.com",
-    "composer.googleapis.com",
-    "iam.googleapis.com",
-    "cloudkms.googleapis.com"
+    "monitoring.googleapis.com",
   ])
 
-  service            = each.value
+  project = var.gcp_project_id
+  service = each.value
+
   disable_on_destroy = false
 }
 
 # ============================================================================
-# CREATE SERVICE ACCOUNTS
+# OPTIONAL: CLOUD SCHEDULER (for daily ingestion)
 # ============================================================================
 
-# Dataflow Service Account
-resource "google_service_account" "dataflow_sa" {
-  account_id   = var.dataflow_sa_name
-  display_name = "Cricket Analytics Dataflow Service Account"
-
-  depends_on = [google_project_service.required_apis["iam.googleapis.com"]]
-}
-
-# Cloud Function Service Account
-resource "google_service_account" "cloud_function_sa" {
-  account_id   = var.cloud_function_sa_name
-  display_name = "Cricket Analytics Cloud Function Service Account"
-
-  depends_on = [google_project_service.required_apis["iam.googleapis.com"]]
-}
-
-# ============================================================================
-# GRANT IAM ROLES TO SERVICE ACCOUNTS
-# ============================================================================
-# Dataflow SA - BigQuery Admin
-resource "google_project_iam_member" "dataflow_bq_admin" {
-  project = var.gcp_project_id
-  role    = "roles/bigquery.admin"
-  member  = "serviceAccount:${google_service_account.dataflow_sa.email}"
-}
-
-# Dataflow SA - Storage Admin
-resource "google_project_iam_member" "dataflow_storage_admin" {
-  project = var.gcp_project_id
-  role    = "roles/storage.admin"
-  member  = "serviceAccount:${google_service_account.dataflow_sa.email}"
-}
-
-# Dataflow SA - Dataflow Worker
-resource "google_project_iam_member" "dataflow_worker" {
-  project = var.gcp_project_id
-  role    = "roles/dataflow.worker"
-  member  = "serviceAccount:${google_service_account.dataflow_sa.email}"
-}
-
-# Cloud Function SA - Dataflow Admin
-resource "google_project_iam_member" "function_dataflow_admin" {
-  project = var.gcp_project_id
-  role    = "roles/dataflow.admin"
-  member  = "serviceAccount:${google_service_account.cloud_function_sa.email}"
-}
-
-# Cloud Function SA - Storage Object Viewer
-resource "google_project_iam_member" "function_storage_viewer" {
-  project = var.gcp_project_id
-  role    = "roles/storage.objectViewer"
-  member  = "serviceAccount:${google_service_account.cloud_function_sa.email}"
-}
-
-
-
-# ============================================================================
-# GCS BUCKETS
-# NOTE: GCS bucket definitions have been moved to gcs.tf
-# All bucket names and configurations are now sourced from:
-#   - config/config.yaml (source of truth)
-#   - variables.tf (terraform overrides via terraform.tfvars)
-# ============================================================================
-# See gcs.tf for all GCS bucket resources
-# They reference config/config.yaml for bucket names and settings
-
-# ============================================================================
-# CREATE BIGQUERY DATASETS
-# ============================================================================
-
-# ============================================================================
-# CREATE ARTIFACT REGISTRY
-# (BigQuery datasets are defined in bigquery.tf)
-# ============================================================================
-
-resource "google_artifact_registry_repository" "docker_repo" {
-  location      = var.gcp_region
-  repository_id = var.artifact_registry_name
-  description   = "Docker repository for Cricket Analytics Dataflow templates"
-  format        = var.artifact_registry_format
-
-  labels = var.labels
-
-  depends_on = [google_project_service.required_apis["artifactregistry.googleapis.com"]]
-}
-
-# ============================================================================
-# CREATE CLOUD FUNCTION (GCS Trigger)
-# ============================================================================
-
-# Create Cloud Function source code bucket (temporary)
-resource "google_storage_bucket" "cloud_function_source" {
-  name          = "${var.gcp_project_id}-cloud-function-source"
-  location      = var.gcp_region
-  force_destroy = true
-
-  labels = var.labels
-
-  depends_on = [google_project_service.required_apis["storage.googleapis.com"]]
-}
-
-# Upload placeholder Cloud Function source
-
-# Cloud Function 2nd Gen
-resource "google_cloudfunctions2_function" "gcs_dataflow_trigger" {
-  name        = var.cloud_function_name
-  location    = var.gcp_region
-  description = "Trigger Dataflow job when CSV is uploaded to GCS"
-
-  labels = var.labels
-
-  build_config {
-    runtime           = var.cloud_function_runtime
-    entry_point       = "process_batting_file"
-    source {
-      storage_source {
-        bucket = google_storage_bucket.cloud_function_source.name
-        object = "function.zip"
-      }
-    }
-  }
-
-  service_config {
-    max_instance_count    = var.cloud_function_max_instances
-    timeout_seconds       = var.cloud_function_timeout
-    service_account_email = google_service_account.cloud_function_sa.email
-
-    environment_variables = {
-      GCP_PROJECT                = var.gcp_project_id
-      GCP_REGION                 = var.gcp_region
-      DATAFLOW_TEMPLATE_LOCATION = var.dataflow_template_location
-      BQ_DATASET                 = var.bq_raw_dataset
-      BQ_TABLE                   = var.bq_raw_table_name
-      TEMP_BUCKET                = google_storage_bucket.dataflow_temp.name  # From gcs.tf
-    }
-  }
-
-  event_trigger {
-    event_type           = "google.cloud.storage.object.v1.finalized"
-    service_account_email = google_service_account.cloud_function_sa.email
-
-    event_filters {
-      attribute = "bucket"
-      value     = google_storage_bucket.raw_data.name  # From gcs.tf
-    }
-
-    event_filters {
-      attribute = "name"
-      value     = "${var.gcs_raw_prefix}.*\\.csv$"
-    }
-  }
-
-  depends_on = [
-    google_project_service.required_apis["cloudfunctions.googleapis.com"]
-  ]
-}
-
-# ============================================================================
-# CREATE CLOUD SCHEDULER JOB
-# ============================================================================
-
-resource "google_cloud_scheduler_job" "daily_ingestion" {
-  name            = var.cloud_scheduler_job_name
-  description     = var.cloud_scheduler_description
-  schedule         = var.cloud_scheduler_schedule
-  time_zone        = var.cloud_scheduler_timezone
-  region           = var.gcp_region
-  attempt_deadline = "320s"
+resource "google_cloud_scheduler_job" "cricket_daily_ingestion" {
+  count           = var.cloud_scheduler_enabled ? 1 : 0
+  name            = "${var.environment_short}-cricket-daily-ingestion"
+  description     = "Daily cricket data ingestion job (${var.environment})"
+  schedule        = var.cloud_scheduler_schedule
+  time_zone       = var.cloud_scheduler_timezone
+  region          = var.gcp_region
+  project         = var.gcp_project_id
 
   http_target {
-    http_method = "POST"
-    uri         = "https://${var.gcp_region}-${var.gcp_project_id}.cloudfunctions.net/${var.cloud_function_name}"
+    http_method = "GET"
+    uri         = "https://example.com/ingest"  # Update with actual Cloud Run URL
 
     oidc_token {
-      service_account_email = google_service_account.cloud_function_sa.email
+      service_account_email = google_service_account.cloud_run.email
     }
   }
 
-  depends_on = [
-    google_project_service.required_apis["cloudscheduler.googleapis.com"],
-    google_cloudfunctions2_function.gcs_dataflow_trigger
-  ]
+  depends_on = [google_project_service.required_apis["cloudscheduler.googleapis.com"]]
 }
 
 # ============================================================================
-# CREATE CLOUD COMPOSER (AIRFLOW)
+# OUTPUTS
 # ============================================================================
 
-resource "google_composer_environment" "cricket_composer" {
-  count = var.enable_cloud_composer ? 1 : 0
+output "bigquery_datasets" {
+  description = "Created BigQuery datasets"
+  value       = module.bigquery.datasets
+}
 
-  name        = var.cloud_composer_name
-  region      = var.gcp_region
-  labels      = var.labels
+output "gcs_buckets" {
+  description = "Created GCS buckets"
+  value       = module.gcs.buckets
+}
 
-  config {
-    software_config {
-      airflow_config_overrides = {
-        "core-load_examples" = "False"
-      }
-
-      pypi_packages = {
-        "apache-airflow-providers-google"       = ">=10.0.0"
-        "apache-airflow-providers-apache-beam"  = ">=5.0.0"
-        "google-cloud-storage"                  = ">=2.10.0"
-        "google-cloud-bigquery"                 = ">=3.10.0"
-        "pandas"                                = ">=2.0.0"
-        "pyyaml"                                = ">=6.0"
-        "requests"                              = ">=2.31.0"
-      }
-
-      env_variables = {
-        GCP_PROJECT_ID  = var.gcp_project_id
-        GCP_REGION      = var.gcp_region
-        RAW_DATASET     = var.bq_raw_dataset
-        STAGING_DATASET = var.bq_staging_dataset
-        CURATED_DATASET = var.bq_curated_dataset
-        RAW_BUCKET      = google_storage_bucket.raw_data.name  # From gcs.tf
-      }
-    }
-
-    node_config {
-      zone         = var.gcp_zone
-      machine_type = var.cloud_composer_machine_type
-      disk_size_gb = var.cloud_composer_disk_size
-    }
-
-    node_count = var.cloud_composer_node_count
+output "service_accounts" {
+  description = "Created service accounts"
+  value = {
+    dataflow        = google_service_account.dataflow.email
+    cloud_function  = google_service_account.cloud_function.email
+    cloud_run       = google_service_account.cloud_run.email
+    cloud_composer  = google_service_account.cloud_composer.email
   }
-
-  depends_on = [google_project_service.required_apis["composer.googleapis.com"]]
 }
 
-# ============================================================================
-# OPTIONAL: MONITORING & ALERTS
-# ============================================================================
-
-resource "google_monitoring_alert_policy" "dag_failure" {
-  count = var.enable_monitoring ? 1 : 0
-
-  display_name = var.alert_policy_name
-  combiner     = "OR"
-  enabled      = true
-
-  conditions {
-    display_name = "DAG Task Failure"
-
-    condition_threshold {
-      filter          = "resource.type=\"cloud_composer_environment\" AND metric.type=\"composer.googleapis.com/dag_run/failed\""
-      duration        = "300s"
-      comparison      = "COMPARISON_GT"
-      threshold_value = 0
-    }
+output "environment_summary" {
+  description = "Environment summary"
+  value = {
+    environment     = var.environment
+    project_id      = var.gcp_project_id
+    region          = var.gcp_region
+    is_production   = local.is_prod
+    monitoring      = var.monitoring_enabled
+    backup_enabled  = var.backup_enabled
   }
-
-  depends_on = [google_project_service.required_apis["monitoring.googleapis.com"]]
-}
-
-# ============================================================================
-# LOCAL VALUES FOR EASY REFERENCE
-# ============================================================================
-
-locals {
-  dataflow_sa_email     = google_service_account.dataflow_sa.email
-  function_sa_email     = google_service_account.cloud_function_sa.email
-  composer_sa_email     = google_service_account.composer_sa.email
 }

@@ -1,14 +1,36 @@
 # ============================================================================
-# Terraform Variables - Cricket Analytics Pipeline
-# All resource names are configurable via tfvars
+# MULTI-ENVIRONMENT TERRAFORM VARIABLES
+# Environment-Specific Configuration (dev, staging, prod)
 # ============================================================================
 
 # ============================================================================
-# GCP PROJECT CONFIGURATION
+# ENVIRONMENT SELECTION
+# ============================================================================
+
+variable "environment" {
+  description = "Environment name: dev, staging, or prod"
+  type        = string
+  validation {
+    condition     = contains(["dev", "staging", "prod"], var.environment)
+    error_message = "Environment must be one of: dev, staging, prod"
+  }
+}
+
+variable "environment_short" {
+  description = "Short environment prefix for resource names (dev, stg, prod)"
+  type        = string
+  validation {
+    condition     = contains(["dev", "stg", "prod"], var.environment_short)
+    error_message = "Short environment must be one of: dev, stg, prod"
+  }
+}
+
+# ============================================================================
+# GCP PROJECT & REGION
 # ============================================================================
 
 variable "gcp_project_id" {
-  description = "GCP Project ID"
+  description = "GCP Project ID (single project for all environments)"
   type        = string
 }
 
@@ -24,229 +46,145 @@ variable "gcp_zone" {
   default     = "us-central1-a"
 }
 
-variable "environment" {
-  description = "Environment name (dev, staging, prod)"
+# ============================================================================
+# RESOURCE NAMING & LABELING
+# ============================================================================
+
+variable "project_name" {
+  description = "Project name for labeling"
   type        = string
-  default     = "dev"
-  # Deployment triggered - June 13, 2026
+  default     = "cricket-analytics"
+}
+
+variable "resource_labels" {
+  description = "Labels to apply to all resources"
+  type        = map(string)
+  default = {
+    managed_by = "terraform"
+    team       = "data-engineering"
+  }
 }
 
 # ============================================================================
-# GCS BUCKET NAMES - All Configurable
+# BIGQUERY CONFIGURATION
 # ============================================================================
 
-variable "bucket_prefix" {
-  description = "Prefix for bucket names"
+variable "bq_dataset_prefix" {
+  description = "BigQuery dataset prefix (dev_, stg_, prod_)"
   type        = string
-  default     = "cricket"
+  validation {
+    condition     = can(regex("^[a-z0-9_]*$", var.bq_dataset_prefix))
+    error_message = "Dataset prefix must contain only lowercase letters, numbers, and underscores"
+  }
 }
 
-variable "gcs_raw_bucket_name" {
-  description = "GCS bucket name for raw data ingestion"
+variable "bq_location" {
+  description = "BigQuery dataset location"
   type        = string
-  default     = "cricket-analytics-raw-data"
+  default     = "us-central1"
 }
 
-variable "gcs_templates_bucket_name" {
-  description = "GCS bucket name for Dataflow Flex Templates"
-  type        = string
-  default     = "cricket-analytics-dataflow-templates"
+variable "bq_dataset_expiration_days" {
+  description = "Auto-delete datasets after N days (null = never)"
+  type        = number
+  default     = null
 }
 
-variable "gcs_temp_bucket_name" {
-  description = "GCS bucket name for Dataflow temporary data"
-  type        = string
-  default     = "cricket-analytics-dataflow-temp"
-}
-
-variable "gcs_raw_prefix" {
-  description = "Prefix for raw data files in GCS"
-  type        = string
-  default     = "batting/"
-}
-
-# ============================================================================
-# BIGQUERY DATASET & TABLE NAMES - All Configurable
-# ============================================================================
-
-variable "bq_raw_dataset" {
-  description = "BigQuery raw data dataset name"
+variable "raw_dataset_name" {
+  description = "Raw layer dataset name"
   type        = string
   default     = "cricket_raw"
 }
 
-variable "bq_staging_dataset" {
-  description = "BigQuery staging dataset name (star schema)"
+variable "staging_dataset_name" {
+  description = "Staging layer dataset name"
   type        = string
   default     = "cricket_staging"
 }
 
-variable "bq_curated_dataset" {
-  description = "BigQuery curated dataset name (analytics views)"
+variable "curated_dataset_name" {
+  description = "Curated layer dataset name"
   type        = string
   default     = "cricket_curated"
 }
 
-variable "bq_raw_table_name" {
-  description = "BigQuery raw batting rankings table name"
+variable "audit_dataset_name" {
+  description = "Audit logs dataset name"
   type        = string
-  default     = "batting_rankings"
+  default     = "cricket_audit_logs"
 }
 
-variable "bq_table_expiration_days" {
-  description = "BigQuery table expiration in days"
+variable "raw_table_partition_expiration_days" {
+  description = "Raw table partition expiration in days"
   type        = number
   default     = 90
 }
 
 # ============================================================================
-# BIGQUERY TABLE NAMES - All Configurable
+# GCS BUCKET CONFIGURATION
 # ============================================================================
 
-variable "bq_raw_table_batting_rankings" {
-  description = "BigQuery raw batting rankings table name"
+variable "gcs_bucket_prefix" {
+  description = "GCS bucket prefix for all buckets"
   type        = string
-  default     = "batting_rankings"
+  # Example: "dev-cricket", "stg-cricket", "prod-cricket"
 }
 
-variable "bq_staging_table_dim_player" {
-  description = "BigQuery staging dimension player table name"
+variable "gcs_location" {
+  description = "GCS bucket location"
   type        = string
-  default     = "dim_player"
+  default     = "us-central1"
 }
 
-variable "bq_staging_table_dim_country" {
-  description = "BigQuery staging dimension country table name"
+variable "gcs_storage_class" {
+  description = "GCS storage class (STANDARD, NEARLINE, COLDLINE)"
   type        = string
-  default     = "dim_country"
+  default     = "STANDARD"
 }
 
-variable "bq_staging_table_dim_format" {
-  description = "BigQuery staging dimension format table name"
-  type        = string
-  default     = "dim_format"
+variable "gcs_versioning_enabled" {
+  description = "Enable GCS object versioning"
+  type        = bool
+  default     = false
 }
 
-variable "bq_staging_table_dim_date" {
-  description = "BigQuery staging dimension date table name"
+# Bucket names
+variable "raw_data_bucket_name" {
+  description = "Raw data bucket name"
   type        = string
-  default     = "dim_date"
+  default     = "cricket-raw-data"
 }
 
-variable "bq_staging_table_fact_batting" {
-  description = "BigQuery staging fact batting rankings table name"
+variable "dataflow_template_bucket_name" {
+  description = "Dataflow template bucket name"
   type        = string
-  default     = "fact_batting_rankings"
+  default     = "cricket-dataflow-templates"
 }
 
-# ============================================================================
-# BIGQUERY VIEW NAMES - All Configurable
-# ============================================================================
-
-variable "bq_raw_view_latest_raw" {
-  description = "BigQuery raw layer latest records view name"
+variable "dataflow_temp_bucket_name" {
+  description = "Dataflow temporary bucket name"
   type        = string
-  default     = "vw_latest_raw"
+  default     = "cricket-dataflow-temp"
 }
 
-variable "bq_curated_view_batting_rankings_latest" {
-  description = "BigQuery curated latest batting rankings view name"
+variable "tf_state_bucket_name" {
+  description = "Terraform state bucket name"
   type        = string
-  default     = "vw_batting_rankings_latest"
-}
-
-variable "bq_curated_view_batting_rankings_90day_trend" {
-  description = "BigQuery curated 90-day batting ranking trend view name"
-  type        = string
-  default     = "vw_batting_rankings_90day_trend"
-}
-
-variable "bq_curated_view_top_10_batsmen_by_format" {
-  description = "BigQuery curated top 10 batsmen by format view name"
-  type        = string
-  default     = "vw_top_10_batsmen_by_format"
-}
-
-variable "bq_curated_view_batting_statistics_by_country" {
-  description = "BigQuery curated batting statistics by country view name"
-  type        = string
-  default     = "vw_batting_statistics_by_country"
-}
-
-variable "bq_curated_view_ranking_comparison_cross_format" {
-  description = "BigQuery curated ranking comparison across formats view name"
-  type        = string
-  default     = "vw_ranking_comparison_cross_format"
+  default     = "cricket-tf-state"
 }
 
 # ============================================================================
-# BIGQUERY CLUSTERING CONFIGURATION - All Configurable
+# DATAFLOW CONFIGURATION
 # ============================================================================
 
-variable "bq_raw_clustering_fields" {
-  description = "BigQuery raw table clustering fields"
-  type        = list(string)
-  default     = ["format", "country"]
-}
-
-variable "bq_fact_clustering_fields" {
-  description = "BigQuery fact table clustering fields"
-  type        = list(string)
-  default     = ["format_id", "country_id"]
-}
-
-# ============================================================================
-# CLOUD FUNCTION NAMES & CONFIG
-# ============================================================================
-
-variable "cloud_function_name" {
-  description = "Cloud Function name for GCS → Dataflow trigger"
-  type        = string
-  default     = "cricket-gcs-dataflow-trigger"
-}
-
-variable "cloud_function_runtime" {
-  description = "Cloud Function runtime"
-  type        = string
-  default     = "python311"
-}
-
-variable "cloud_function_timeout" {
-  description = "Cloud Function timeout in seconds"
-  type        = number
-  default     = 600
-}
-
-variable "cloud_function_memory" {
-  description = "Cloud Function memory in MB"
-  type        = number
-  default     = 512
-}
-
-variable "cloud_function_max_instances" {
-  description = "Cloud Function max concurrent instances"
-  type        = number
-  default     = 10
-}
-
-# ============================================================================
-# DATAFLOW PIPELINE NAMES & CONFIG
-# ============================================================================
-
-variable "dataflow_pipeline_name" {
-  description = "Dataflow pipeline name"
-  type        = string
-  default     = "cricket-batting-rankings-pipeline"
-}
-
-variable "dataflow_machine_type" {
-  description = "Machine type for Dataflow workers"
+variable "dataflow_worker_machine_type" {
+  description = "Dataflow worker machine type"
   type        = string
   default     = "n1-standard-2"
 }
 
-variable "dataflow_num_workers" {
-  description = "Initial number of Dataflow workers"
+variable "dataflow_min_workers" {
+  description = "Minimum number of Dataflow workers"
   type        = number
   default     = 2
 }
@@ -257,26 +195,32 @@ variable "dataflow_max_workers" {
   default     = 5
 }
 
-variable "dataflow_template_location" {
-  description = "GCS location of Dataflow Flex Template metadata"
+variable "dataflow_autoscaling_enabled" {
+  description = "Enable Dataflow autoscaling"
+  type        = bool
+  default     = true
+}
+
+variable "dataflow_temp_location" {
+  description = "Dataflow temporary location"
   type        = string
-  default     = "gs://cricket-analytics-dataflow-templates/batting-pipeline/metadata"
+  # Will be set to gs://{dataflow_temp_bucket}/temp
 }
 
 # ============================================================================
-# CLOUD SCHEDULER NAMES & CONFIG
+# CLOUD SCHEDULER CONFIGURATION
 # ============================================================================
 
-variable "cloud_scheduler_job_name" {
-  description = "Cloud Scheduler job name"
-  type        = string
-  default     = "cricket-daily-ingestion"
+variable "cloud_scheduler_enabled" {
+  description = "Enable Cloud Scheduler"
+  type        = bool
+  default     = true
 }
 
 variable "cloud_scheduler_schedule" {
-  description = "Cloud Scheduler cron schedule (UTC)"
+  description = "Cloud Scheduler cron expression (UTC)"
   type        = string
-  default     = "0 6 * * *"
+  default     = "0 6 * * *"  # Daily at 6 AM UTC
 }
 
 variable "cloud_scheduler_timezone" {
@@ -285,123 +229,154 @@ variable "cloud_scheduler_timezone" {
   default     = "UTC"
 }
 
-variable "cloud_scheduler_description" {
-  description = "Cloud Scheduler job description"
-  type        = string
-  default     = "Daily cricket rankings ingestion trigger"
-}
-
 # ============================================================================
-# CLOUD COMPOSER (AIRFLOW) NAMES & CONFIG
+# SERVICE ACCOUNTS & IAM
 # ============================================================================
 
-variable "cloud_composer_name" {
-  description = "Cloud Composer environment name"
-  type        = string
-  default     = "cricket-analytics-composer"
-}
-
-variable "cloud_composer_machine_type" {
-  description = "Machine type for Cloud Composer GKE nodes"
-  type        = string
-  default     = "n1-standard-4"
-}
-
-variable "cloud_composer_node_count" {
-  description = "Number of nodes in Cloud Composer cluster"
-  type        = number
-  default     = 3
-}
-
-variable "cloud_composer_disk_size" {
-  description = "Cloud Composer disk size in GB"
-  type        = number
-  default     = 30
-}
-
-variable "cloud_composer_airflow_version" {
-  description = "Airflow version for Cloud Composer"
-  type        = string
-  default     = "2.7.3"
-}
-
-variable "enable_cloud_composer" {
-  description = "Enable Cloud Composer for Airflow orchestration"
-  type        = bool
-  default     = true
-}
-
-# ============================================================================
-# ARTIFACT REGISTRY NAMES
-# ============================================================================
-
-variable "artifact_registry_name" {
-  description = "Artifact Registry repository name"
-  type        = string
-  default     = "cricket-docker"
-}
-
-variable "artifact_registry_format" {
-  description = "Artifact Registry repository format"
-  type        = string
-  default     = "DOCKER"
-}
-
-# ============================================================================
-# SERVICE ACCOUNT NAMES
-# ============================================================================
-
-variable "dataflow_sa_name" {
+variable "dataflow_service_account_name" {
   description = "Dataflow service account name"
   type        = string
   default     = "cricket-dataflow-sa"
 }
 
-variable "cloud_function_sa_name" {
+variable "cloud_function_service_account_name" {
   description = "Cloud Function service account name"
   type        = string
   default     = "cricket-cloud-function-sa"
 }
 
-variable "cloud_composer_sa_name" {
+variable "cloud_run_service_account_name" {
+  description = "Cloud Run service account name"
+  type        = string
+  default     = "cricket-cloud-run-sa"
+}
+
+variable "cloud_composer_service_account_name" {
   description = "Cloud Composer service account name"
   type        = string
   default     = "cricket-composer-sa"
 }
 
 # ============================================================================
-# MONITORING & LOGGING
+# CLOUD COMPOSER (AIRFLOW) CONFIGURATION
 # ============================================================================
 
-variable "enable_monitoring" {
-  description = "Enable Cloud Monitoring and alerting"
+variable "cloud_composer_enabled" {
+  description = "Enable Cloud Composer environment"
   type        = bool
   default     = true
 }
 
-variable "alert_policy_name" {
-  description = "Cloud Monitoring alert policy name"
-  type        = string
-  default     = "cricket-dag-failure-alert"
-}
-
-variable "log_sink_name" {
-  description = "Cloud Logging sink name"
-  type        = string
-  default     = "cricket-analytics-logs"
-}
-
-# ============================================================================
-# TAGS & LABELS
-# ============================================================================
-
-variable "labels" {
-  description = "Labels to apply to all resources"
-  type        = map(string)
-  default = {
-    project     = "cricket-analytics"
-    environment = "dev"
-    managed_by  = "terraform"
-    team        = "data-engineering"
+variable "cloud_composer_node_count" {
+  description = "Number of Cloud Composer nodes"
+  type        = number
+  default     = 3
+  validation {
+    condition     = var.cloud_composer_node_count >= 3
+    error_message = "Cloud Composer requires minimum 3 nodes"
   }
+}
+
+variable "cloud_composer_machine_type" {
+  description = "Cloud Composer node machine type"
+  type        = string
+  default     = "n1-standard-4"
+}
+
+variable "cloud_composer_disk_size_gb" {
+  description = "Cloud Composer disk size in GB"
+  type        = number
+  default     = 30
+}
+
+# ============================================================================
+# MONITORING & ALERTING
+# ============================================================================
+
+variable "monitoring_enabled" {
+  description = "Enable monitoring and alerting"
+  type        = bool
+  default     = false  # Lite in dev, true in stg/prod
+}
+
+variable "alert_email" {
+  description = "Email for alerts"
+  type        = string
+  default     = ""
+}
+
+# ============================================================================
+# BACKUP & DISASTER RECOVERY
+# ============================================================================
+
+variable "backup_enabled" {
+  description = "Enable automated backups"
+  type        = bool
+  default     = false  # Disabled in dev/stg, enabled in prod
+}
+
+variable "backup_frequency_hours" {
+  description = "Backup frequency in hours"
+  type        = number
+  default     = 24
+}
+
+variable "backup_retention_days" {
+  description = "Backup retention period in days"
+  type        = number
+  default     = 7
+}
+
+# ============================================================================
+# FEATURE FLAGS
+# ============================================================================
+
+variable "api_ingestion_enabled" {
+  description = "Enable API ingestion pipeline"
+  type        = bool
+  default     = true
+}
+
+variable "dataflow_processing_enabled" {
+  description = "Enable Dataflow processing"
+  type        = bool
+  default     = true
+}
+
+variable "bigquery_transformation_enabled" {
+  description = "Enable BigQuery transformations"
+  type        = bool
+  default     = true
+}
+
+# ============================================================================
+# ENVIRONMENT-SPECIFIC SETTINGS (computed from environment)
+# ============================================================================
+
+locals {
+  # Full dataset names with prefix
+  raw_dataset         = "${var.bq_dataset_prefix}${var.raw_dataset_name}"
+  staging_dataset     = "${var.bq_dataset_prefix}${var.staging_dataset_name}"
+  curated_dataset     = "${var.bq_dataset_prefix}${var.curated_dataset_name}"
+  audit_dataset       = "${var.bq_dataset_prefix}${var.audit_dataset_name}"
+
+  # Full bucket names with prefix
+  raw_data_bucket             = "${var.gcs_bucket_prefix}-${var.raw_data_bucket_name}"
+  dataflow_template_bucket    = "${var.gcs_bucket_prefix}-${var.dataflow_template_bucket_name}"
+  dataflow_temp_bucket        = "${var.gcs_bucket_prefix}-${var.dataflow_temp_bucket_name}"
+  tf_state_bucket             = "${var.gcs_bucket_prefix}-${var.tf_state_bucket_name}"
+
+  # Resource labels with environment
+  resource_labels = merge(
+    var.resource_labels,
+    {
+      environment = var.environment
+      environment_short = var.environment_short
+    }
+  )
+
+  # Environment-specific defaults
+  is_dev     = var.environment_short == "dev"
+  is_staging = var.environment_short == "stg"
+  is_prod    = var.environment_short == "prod"
 }

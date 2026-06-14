@@ -393,48 +393,11 @@ jobs:
 
           echo "✅ BigQuery setup completed for PRODUCTION"
 
-  # ============= CLOUD COMPOSER DAG DEPLOYMENT =============
-  deploy-dags:
-    name: 📦 Deploy Cloud Composer DAGs
-    runs-on: ubuntu-latest
-    needs: bigquery-setup
-    steps:
-      - name: 📥 Checkout code
-        uses: actions/checkout@v4
-
-      - name: 🔐 Authenticate to Google Cloud
-        uses: google-github-actions/auth@v2
-        with:
-          credentials_json: ${{ secrets.PROD_GCP_CREDENTIALS_JSON }}
-
-      - name: ☁️ Setup Google Cloud SDK
-        uses: google-github-actions/setup-gcloud@v1
-
-      - name: 📋 Set Project ID
-        run: |
-          gcloud config set project ${{ secrets.PROD_GCP_PROJECT_ID }}
-
-      - name: 🚀 Deploy DAGs to Cloud Composer
-        run: |
-          echo "🚀 Deploying DAGs to Cloud Composer..."
-
-          gcloud composer environments storage dags import \
-            --environment cricket-analytics-composer \
-            --location ${{ env.GCP_REGION }} \
-            --source pipeline/airflow/dags/cricket_analytics_dag.py
-
-          gcloud composer environments storage dags import \
-            --environment cricket-analytics-composer \
-            --location ${{ env.GCP_REGION }} \
-            --source pipeline/airflow/dags/data_quality_monitoring_dag.py
-
-          echo "✅ DAGs deployed successfully to Cloud Composer"
-
   # ============= HEALTH CHECKS =============
   health-checks:
     name: 🏥 Production Health Checks
     runs-on: ubuntu-latest
-    needs: deploy-dags
+    needs: bigquery-setup
     steps:
       - name: 📥 Checkout code
         uses: actions/checkout@v4

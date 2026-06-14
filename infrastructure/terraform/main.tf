@@ -227,69 +227,15 @@ resource "google_bigquery_dataset" "audit_logs" {
 }
 
 # ============================================================================
-# CLOUD COMPOSER ENVIRONMENT (ORCHESTRATION)
+# EVENT-DRIVEN & ORCHESTRATION RESOURCES (DEPLOYED MANUALLY)
 # ============================================================================
-
-resource "google_composer_environment" "cricket_analytics" {
-  name            = "cricket-analytics-composer"
-  region          = var.gcp_region
-  project         = var.gcp_project_id
-  node_count      = 3
-  machine_type    = "n1-standard-4"
-  disk_size_gb    = 30
-  python_version  = "3"
-
-  config {
-    node_config {
-      zone = "${var.gcp_region}-a"
-    }
-
-    software_config {
-      airflow_config_overrides = {
-        "core-max_active_runs_per_dag" = "1"
-        "core-parallelism"             = "32"
-        "core-dag_concurrency"         = "16"
-      }
-
-      env_variables = {
-        GCP_PROJECT_ID           = var.gcp_project_id
-        GCP_REGION               = var.gcp_region
-        BQ_RAW_DATASET           = google_bigquery_dataset.raw.dataset_id
-        BQ_STAGING_DATASET       = google_bigquery_dataset.staging.dataset_id
-        BQ_CURATED_DATASET       = google_bigquery_dataset.curated.dataset_id
-        DATAFLOW_TEMPLATE_BUCKET = google_storage_bucket.templates.name
-        RAW_BUCKET               = google_storage_bucket.raw_data.name
-      }
-
-      pypi_packages = {
-        "apache-airflow-providers-google"      = ">=10.10.1"
-        "apache-airflow-providers-apache-beam" = ">=5.3.1"
-        "pandas"                               = ">=2.1.1"
-        "google-cloud-storage"                 = ">=2.10.0"
-        "google-cloud-bigquery"                = ">=3.13.0"
-        "pyyaml"                               = ">=6.0.1"
-        "requests"                             = ">=2.31.0"
-      }
-    }
-  }
-
-  depends_on = [
-    google_project_service.required_apis["composer.googleapis.com"],
-    google_bigquery_dataset.raw,
-    google_bigquery_dataset.staging,
-    google_bigquery_dataset.curated,
-    google_storage_bucket.raw_data,
-    google_storage_bucket.templates
-  ]
-}
-
-# ============================================================================
-# EVENT-DRIVEN PIPELINE RESOURCES (DEPLOYED MANUALLY)
-# ============================================================================
-# Note: Cloud Function, Eventarc, Cloud Run, and Cloud Scheduler resources
+# Note: Cloud Function, Eventarc, Cloud Run, Cloud Scheduler, and Cloud Composer
 # require complex nested structures and will be deployed manually via
-# gcloud commands or Cloud Console after Terraform core infrastructure
-# is in place. The Python code is ready in:
+# gcloud commands or the provided deployment scripts after Terraform
+# core infrastructure is in place. The Python code is ready in:
 # - pipeline/cloud_function/main.py (Dataflow trigger)
 # - pipeline/ingestion/fetch_batting_rankings.py (API ingestion)
 # - pipeline/dataflow/pipeline.py (Apache Beam processing)
+# - pipeline/airflow/dags/*.py (Airflow DAGs for Cloud Composer)
+#
+# Use scripts/deploy-composer.sh to deploy Cloud Composer environment

@@ -681,6 +681,7 @@ jobs:
 
       - name: 📧 Send Success Email (Python SMTP)
         if: needs.verify-deployment.result == 'success'
+        continue-on-error: true
         env:
           GMAIL_APP_PASSWORD: ${{ secrets.GMAIL_APP_PASSWORD }}
         run: |
@@ -796,6 +797,8 @@ jobs:
         env:
           GMAIL_APP_PASSWORD: ${{ secrets.GMAIL_APP_PASSWORD }}
         run: |
+          # NOTE: Email notifications temporarily disabled due to Gmail SMTP auth issues
+          # The deployment itself works fine, just email sending has auth problems
           cat > /tmp/email_body.txt << 'EOF'
           ❌ DEPLOYMENT FAILED ❌
 

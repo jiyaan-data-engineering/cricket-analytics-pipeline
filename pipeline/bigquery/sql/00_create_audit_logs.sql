@@ -17,7 +17,7 @@ OPTIONS(
 
 CREATE OR REPLACE TABLE `{PROJECT_ID}.cricket_audit_logs.api_ingestion_audit_log` (
   run_id STRING NOT NULL,
-  pipeline_stage STRING NOT NULL DEFAULT 'api_ingestion',
+  pipeline_stage STRING NOT NULL,
   execution_date TIMESTAMP NOT NULL,
   status STRING NOT NULL,  -- SUCCESS, FAILED, RUNNING
 
@@ -46,13 +46,12 @@ CREATE OR REPLACE TABLE `{PROJECT_ID}.cricket_audit_logs.api_ingestion_audit_log
   retry_attempt_count INT64,
 
   -- Audit Trail
-  created_timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP(),
-  modified_timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP(),
+  created_timestamp TIMESTAMP,
+  modified_timestamp TIMESTAMP,
 
-  CONSTRAINT pk_api_ingestion PRIMARY KEY (run_id) NOT ENFORCED
 )
 PARTITION BY DATE(execution_date)
-CLUSTER BY status, DATE(execution_date);
+CLUSTER BY status, execution_date;
 
 -- ============================================================================
 -- TABLE 2: DATAFLOW_PROCESSING_AUDIT_LOG
@@ -61,7 +60,7 @@ CLUSTER BY status, DATE(execution_date);
 
 CREATE OR REPLACE TABLE `{PROJECT_ID}.cricket_audit_logs.dataflow_processing_audit_log` (
   run_id STRING NOT NULL,
-  pipeline_stage STRING NOT NULL DEFAULT 'dataflow_processing',
+  pipeline_stage STRING NOT NULL,
   execution_date TIMESTAMP NOT NULL,
   status STRING NOT NULL,  -- SUCCESS, FAILED, RUNNING
 
@@ -101,10 +100,9 @@ CREATE OR REPLACE TABLE `{PROJECT_ID}.cricket_audit_logs.dataflow_processing_aud
   error_type STRING,
 
   -- Audit Trail
-  created_timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP(),
-  modified_timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP(),
+  created_timestamp TIMESTAMP,
+  modified_timestamp TIMESTAMP,
 
-  CONSTRAINT pk_dataflow PRIMARY KEY (run_id) NOT ENFORCED
 )
 PARTITION BY DATE(execution_date)
 CLUSTER BY status, dataflow_job_id;
@@ -116,7 +114,7 @@ CLUSTER BY status, dataflow_job_id;
 
 CREATE OR REPLACE TABLE `{PROJECT_ID}.cricket_audit_logs.data_transformation_audit_log` (
   run_id STRING NOT NULL,
-  pipeline_stage STRING NOT NULL DEFAULT 'data_transformation',
+  pipeline_stage STRING NOT NULL,
   execution_date TIMESTAMP NOT NULL,
   status STRING NOT NULL,  -- SUCCESS, FAILED, RUNNING
 
@@ -153,10 +151,9 @@ CREATE OR REPLACE TABLE `{PROJECT_ID}.cricket_audit_logs.data_transformation_aud
   sql_error_line_number INT64,
 
   -- Audit Trail
-  created_timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP(),
-  modified_timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP(),
+  created_timestamp TIMESTAMP,
+  modified_timestamp TIMESTAMP,
 
-  CONSTRAINT pk_transformation PRIMARY KEY (run_id, transformation_name) NOT ENFORCED
 )
 PARTITION BY DATE(execution_date)
 CLUSTER BY status, transformation_name;
@@ -168,7 +165,7 @@ CLUSTER BY status, transformation_name;
 
 CREATE OR REPLACE TABLE `{PROJECT_ID}.cricket_audit_logs.analytics_views_audit_log` (
   run_id STRING NOT NULL,
-  pipeline_stage STRING NOT NULL DEFAULT 'analytics_views',
+  pipeline_stage STRING NOT NULL,
   execution_date TIMESTAMP NOT NULL,
   status STRING NOT NULL,  -- SUCCESS, FAILED, RUNNING
 
@@ -205,10 +202,9 @@ CREATE OR REPLACE TABLE `{PROJECT_ID}.cricket_audit_logs.analytics_views_audit_l
   error_code STRING,
 
   -- Audit Trail
-  created_timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP(),
-  modified_timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP(),
+  created_timestamp TIMESTAMP,
+  modified_timestamp TIMESTAMP,
 
-  CONSTRAINT pk_analytics_views PRIMARY KEY (run_id, view_name) NOT ENFORCED
 )
 PARTITION BY DATE(execution_date)
 CLUSTER BY status, view_name;
@@ -245,82 +241,8 @@ CREATE OR REPLACE TABLE `{PROJECT_ID}.cricket_audit_logs.pipeline_execution_summ
   warning_count INT64,
 
   -- Audit Trail
-  created_timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP(),
+  created_timestamp TIMESTAMP,
 
-  CONSTRAINT pk_execution_summary PRIMARY KEY (execution_run_id, pipeline_stage_number) NOT ENFORCED
 )
 PARTITION BY DATE(execution_date)
 CLUSTER BY status, pipeline_stage_name;
-
--- ============================================================================
--- MONITORING & ANALYTICS VIEWS
--- ============================================================================
-
--- View: Pipeline Success Rate (Last 30 days)
-CREATE OR REPLACE VIEW `{PROJECT_ID}.cricket_audit_logs.vw_pipeline_success_metrics` AS
-SELECT
-  pipeline_stage_name,
-  DATE(execution_date) as execution_date,
-  COUNT(*) as total_pipeline_runs,
-  COUNTIF(status = 'SUCCESS') as successful_runs,
-  COUNTIF(status = 'FAILED') as failed_runs,
-  ROUND(COUNTIF(status = 'SUCCESS') / COUNT(*) * 100, 2) as success_rate_percent,
-  ROUND(AVG(total_execution_duration_seconds), 2) as avg_execution_duration_seconds
-FROM `{PROJECT_ID}.cricket_audit_logs.pipeline_execution_summary`
-WHERE DATE(execution_date) >= DATE_SUB(CURRENT_DATE(), INTERVAL 30 DAY)
-GROUP BY pipeline_stage_name, execution_date
-ORDER BY execution_date DESC, success_rate_percent DESC;
-
--- View: Data Quality Scorecard
-CREATE OR REPLACE VIEW `{PROJECT_ID}.cricket_audit_logs.vw_data_quality_scorecard` AS
-SELECT
-  DATE(execution_date) as execution_date,
-  'API Ingestion' as component,
-  total_records_fetched as records_processed,
-  error_record_count as errors,
-  ROUND(((total_records_fetched - COALESCE(error_record_count, 0)) / NULLIF(total_records_fetched, 0) * 100), 2) as quality_score
-FROM `{PROJECT_ID}.cricket_audit_logs.api_ingestion_audit_log`
-WHERE status = 'SUCCESS'
-UNION ALL
-SELECT
-  DATE(execution_date),
-  'Dataflow Processing',
-  processed_record_count,
-  error_record_count,
-  ROUND(((processed_record_count - error_record_count) / NULLIF(processed_record_count, 0) * 100), 2)
-FROM `{PROJECT_ID}.cricket_audit_logs.dataflow_processing_audit_log`
-WHERE status = 'SUCCESS'
-UNION ALL
-SELECT
-  DATE(execution_date),
-  CONCAT('Transformation: ', transformation_name),
-  total_affected_record_count,
-  constraint_violation_count,
-  ROUND(((total_affected_record_count - constraint_violation_count) / NULLIF(total_affected_record_count, 0) * 100), 2)
-FROM `{PROJECT_ID}.cricket_audit_logs.data_transformation_audit_log`
-WHERE status = 'SUCCESS'
-UNION ALL
-SELECT
-  DATE(execution_date),
-  CONCAT('Analytics View: ', view_name),
-  view_row_count,
-  0,
-  100.0
-FROM `{PROJECT_ID}.cricket_audit_logs.analytics_views_audit_log`
-WHERE status = 'SUCCESS'
-ORDER BY execution_date DESC;
-
--- View: Pipeline Performance Report
-CREATE OR REPLACE VIEW `{PROJECT_ID}.cricket_audit_logs.vw_pipeline_performance_report` AS
-SELECT
-  pipeline_stage_name,
-  COUNT(*) as total_executions,
-  ROUND(AVG(total_execution_duration_seconds), 2) as avg_duration_seconds,
-  ROUND(MIN(total_execution_duration_seconds), 2) as min_duration_seconds,
-  ROUND(MAX(total_execution_duration_seconds), 2) as max_duration_seconds,
-  ROUND(STDDEV(total_execution_duration_seconds), 2) as stddev_duration_seconds
-FROM `{PROJECT_ID}.cricket_audit_logs.pipeline_execution_summary`
-WHERE DATE(execution_date) >= DATE_SUB(CURRENT_DATE(), INTERVAL 30 DAY)
-  AND status = 'SUCCESS'
-GROUP BY pipeline_stage_name
-ORDER BY avg_duration_seconds DESC;

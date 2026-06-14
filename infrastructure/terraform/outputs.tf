@@ -85,3 +85,49 @@ output "cloud_composer_service_account" {
   value       = google_service_account.cloud_composer.email
   description = "Cloud Composer service account email"
 }
+
+# ============================================================================
+# ARTIFACT REGISTRY
+# ============================================================================
+
+output "artifact_registry_repository" {
+  value       = google_artifact_registry_repository.dataflow.repository_id
+  description = "Artifact Registry repository for Dataflow templates"
+}
+
+output "artifact_registry_location" {
+  value       = google_artifact_registry_repository.dataflow.location
+  description = "Artifact Registry repository location"
+}
+
+# ============================================================================
+# CLOUD FUNCTION
+# ============================================================================
+
+output "cloud_function_uri" {
+  value       = google_cloudfunctions2_function.dataflow_trigger.service_config[0].uri
+  description = "Cloud Function URI for testing"
+}
+
+output "eventarc_trigger_name" {
+  value       = google_eventarc_trigger.gcs_to_dataflow.name
+  description = "Eventarc trigger name"
+}
+
+# ============================================================================
+# CLOUD RUN
+# ============================================================================
+
+output "cloud_run_ingestion_url" {
+  value       = google_cloud_run_service.ingestion.status[0].url
+  description = "Cloud Run ingestion service URL"
+}
+
+# ============================================================================
+# CLOUD SCHEDULER
+# ============================================================================
+
+output "cloud_scheduler_job_name" {
+  value       = google_cloud_scheduler_job.ingestion_trigger.name
+  description = "Cloud Scheduler job name for daily ingestion"
+}

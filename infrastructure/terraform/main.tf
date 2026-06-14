@@ -33,7 +33,7 @@ resource "google_project_service" "required_apis" {
     "dataflow.googleapis.com",
     "cloudscheduler.googleapis.com",
     "cloudfunctions.googleapis.com",
-    # "cloudrun.googleapis.com",  # Regional constraint
+    "run.googleapis.com",
     "composer.googleapis.com",
     "artifactregistry.googleapis.com",
     "eventarc.googleapis.com",
@@ -224,4 +224,155 @@ resource "google_bigquery_dataset" "audit_logs" {
   description   = "Pipeline audit and monitoring logs"
   location      = var.gcp_region
   project       = var.gcp_project_id
+}
+
+# ============================================================================
+# ARTIFACT REGISTRY FOR DATAFLOW FLEX TEMPLATE
+# ============================================================================
+
+resource "google_artifact_registry_repository" "dataflow" {
+  location      = var.gcp_region
+  repository_id = "cricket-dataflow"
+  description   = "Docker repository for Dataflow Flex Templates"
+  format        = "DOCKER"
+  project       = var.gcp_project_id
+}
+
+# ============================================================================
+# CLOUD FUNCTION FOR DATAFLOW TRIGGER (2nd Gen)
+# ============================================================================
+
+resource "google_cloudfunctions2_function" "dataflow_trigger" {
+  name            = "cricket-dataflow-trigger"
+  location        = var.gcp_region
+  description     = "Triggered by GCS finalization to launch Dataflow job"
+  build_config {
+    runtime           = "python311"
+    entry_point       = "process_batting_file"
+    source {
+      storage_source {
+        bucket = google_storage_bucket.raw_data.name
+        object = "cloud-function/main.zip"
+      }
+    }
+  }
+
+  service_config {
+    max_instance_count             = 10
+    min_instance_count             = 1
+    available_memory_mb            = 512
+    timeout_seconds                = 600
+    service_account_email          = google_service_account.cloud_function.email
+    ingress_settings               = "INTERNAL_ONLY"
+    all_traffic_on_latest_revision = true
+    environment_variables = {
+      GCP_PROJECT                = var.gcp_project_id
+      GCP_REGION                 = var.gcp_region
+      DATAFLOW_TEMPLATE_LOCATION = "gs://${google_storage_bucket.templates.name}/batting-pipeline"
+      BQ_DATASET                 = google_bigquery_dataset.raw.dataset_id
+      BQ_TABLE                   = "batting_rankings"
+    }
+  }
+
+  project = var.gcp_project_id
+
+  depends_on = [
+    google_project_service.required_apis["cloudfunctions.googleapis.com"]
+  ]
+}
+
+# ============================================================================
+# EVENTARC TRIGGER: GCS → CLOUD FUNCTION
+# ============================================================================
+
+resource "google_eventarc_trigger" "gcs_to_dataflow" {
+  name            = "cricket-gcs-to-dataflow"
+  location        = var.gcp_region
+  service_account = google_service_account.cloud_function.email
+  matching_criteria {
+    attribute = "type"
+    value     = "google.cloud.storage.object.v1.finalized"
+  }
+  matching_criteria {
+    attribute = "bucket"
+    value     = google_storage_bucket.raw_data.name
+  }
+  destination {
+    cloud_function_target {
+      function = google_cloudfunctions2_function.dataflow_trigger.id
+    }
+  }
+  project = var.gcp_project_id
+
+  depends_on = [
+    google_project_service.required_apis["eventarc.googleapis.com"]
+  ]
+}
+
+# ============================================================================
+# CLOUD RUN FOR INGESTION SERVICE
+# ============================================================================
+
+resource "google_cloud_run_service" "ingestion" {
+  name     = "cricket-ingestion"
+  location = var.gcp_region
+  project  = var.gcp_project_id
+
+  template {
+    spec {
+      service_account_email = google_service_account.cloud_run.email
+      containers {
+        image = "gcr.io/cloud-builders/gke-deploy:stable"  # Placeholder - update with actual image
+        env {
+          name  = "GCP_PROJECT"
+          value = var.gcp_project_id
+        }
+        env {
+          name  = "GCP_REGION"
+          value = var.gcp_region
+        }
+        env {
+          name  = "RAW_BUCKET"
+          value = google_storage_bucket.raw_data.name
+        }
+        env {
+          name  = "RAPIDAPI_KEY"
+          value = ""  # Must be set via CI/CD secrets
+        }
+      }
+      timeout_seconds = 600
+    }
+  }
+
+  depends_on = [
+    google_project_service.required_apis["run.googleapis.com"]
+  ]
+}
+
+# ============================================================================
+# CLOUD SCHEDULER FOR DAILY INGESTION
+# ============================================================================
+
+resource "google_cloud_scheduler_job" "ingestion_trigger" {
+  name            = "cricket-ingestion-daily"
+  description     = "Trigger Cloud Run for daily cricket data ingestion at 06:00 UTC"
+  schedule        = "0 6 * * *"
+  time_zone       = "UTC"
+  attempt_deadline = "320s"
+  region          = var.gcp_region
+  project         = var.gcp_project_id
+
+  http_target {
+    uri        = google_cloud_run_service.ingestion.status[0].url
+    http_method = "POST"
+
+    oidc_token {
+      service_account_email = google_service_account.cloud_run.email
+      audience             = google_cloud_run_service.ingestion.status[0].url
+    }
+  }
+
+  depends_on = [
+    google_project_service.required_apis["cloudscheduler.googleapis.com"]
+  ]
 }

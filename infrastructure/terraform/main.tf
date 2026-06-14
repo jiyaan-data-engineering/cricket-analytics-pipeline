@@ -50,10 +50,11 @@ resource "google_project_service" "required_apis" {
 # CREATE SERVICE ACCOUNTS
 # ============================================================================
 
-resource "google_service_account" "dataflow" {
-  account_id   = "cricket-dataflow-sa"
-  display_name = "Cricket Analytics Dataflow Service Account"
-}
+# Already created manually - commented out to avoid conflicts
+# resource "google_service_account" "dataflow" {
+#   account_id   = "cricket-dataflow-sa"
+#   display_name = "Cricket Analytics Dataflow Service Account"
+# }
 
 resource "google_service_account" "cloud_function" {
   account_id   = "cricket-cloud-function-sa"
@@ -175,18 +176,19 @@ resource "google_storage_bucket" "temp" {
   }
 }
 
-resource "google_storage_bucket" "tf_state" {
-  name          = "cricket-tf-state-prod"
-  location      = var.gcp_region
-  project       = var.gcp_project_id
-  force_destroy = false
-
-  uniform_bucket_level_access = true
-
-  versioning {
-    enabled = true
-  }
-}
+# Already created manually - commented out to avoid conflicts
+# resource "google_storage_bucket" "tf_state" {
+#   name          = "cricket-tf-state-prod"
+#   location      = var.gcp_region
+#   project       = var.gcp_project_id
+#   force_destroy = false
+#
+#   uniform_bucket_level_access = true
+#
+#   versioning {
+#     enabled = true
+#   }
+# }
 
 # ============================================================================
 # CREATE BIGQUERY DATASETS

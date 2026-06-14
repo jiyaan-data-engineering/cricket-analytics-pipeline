@@ -27,7 +27,7 @@ provider "google" {
 # ============================================================================
 
 resource "google_project_service" "required_apis" {
-  for_each = toset([
+  for_each            = toset([
     "bigquery.googleapis.com",
     "storage-api.googleapis.com",
     "dataflow.googleapis.com",
@@ -41,9 +41,8 @@ resource "google_project_service" "required_apis" {
     "monitoring.googleapis.com",
     "iam.googleapis.com"
   ])
-
-  service = each.value
-  disable_on_destroy = false
+  service             = each.value
+  disable_on_destroy  = false
 }
 
 # ============================================================================

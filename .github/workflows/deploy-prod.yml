@@ -562,5 +562,3 @@ jobs:
             *Deployed automatically by GitHub Actions*
           draft: false
           prerelease: false
-          files: |
-            infrastructure/terraform/prod.tfplan

@@ -156,10 +156,15 @@ jobs:
       - name: 🔐 Authenticate to Google Cloud
         uses: google-github-actions/auth@v2
         with:
-          credentials_json: ${{ secrets.PROD_GCP_CREDENTIALS_JSON }}
+          workload_identity_provider: ${{ secrets.PROD_WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ secrets.PROD_SERVICE_ACCOUNT_EMAIL }}
 
       - name: ☁️ Setup Google Cloud SDK
         uses: google-github-actions/setup-gcloud@v1
+
+      - name: 📍 Set GCP Project
+        run: |
+          gcloud config set project ${{ secrets.PROD_GCP_PROJECT_ID }}
 
       - name: 📍 Initialize Terraform
         working-directory: infrastructure/terraform
@@ -208,7 +213,8 @@ jobs:
       - name: 🔐 Authenticate to Google Cloud
         uses: google-github-actions/auth@v2
         with:
-          credentials_json: ${{ secrets.PROD_GCP_CREDENTIALS_JSON }}
+          workload_identity_provider: ${{ secrets.PROD_WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ secrets.PROD_SERVICE_ACCOUNT_EMAIL }}
 
       - name: ☁️ Setup Google Cloud SDK
         uses: google-github-actions/setup-gcloud@v1
@@ -287,10 +293,15 @@ jobs:
       - name: 🔐 Authenticate to Google Cloud
         uses: google-github-actions/auth@v2
         with:
-          credentials_json: ${{ secrets.PROD_GCP_CREDENTIALS_JSON }}
+          workload_identity_provider: ${{ secrets.PROD_WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ secrets.PROD_SERVICE_ACCOUNT_EMAIL }}
 
       - name: ☁️ Setup Google Cloud SDK
         uses: google-github-actions/setup-gcloud@v1
+
+      - name: 📍 Set GCP Project
+        run: |
+          gcloud config set project ${{ secrets.PROD_GCP_PROJECT_ID }}
 
       - name: 📍 Initialize Terraform
         working-directory: infrastructure/terraform
@@ -331,7 +342,8 @@ jobs:
       - name: 🔐 Authenticate to Google Cloud
         uses: google-github-actions/auth@v2
         with:
-          credentials_json: ${{ secrets.PROD_GCP_CREDENTIALS_JSON }}
+          workload_identity_provider: ${{ secrets.PROD_WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ secrets.PROD_SERVICE_ACCOUNT_EMAIL }}
 
       - name: ☁️ Setup Google Cloud SDK
         uses: google-github-actions/setup-gcloud@v1
@@ -388,7 +400,8 @@ jobs:
       - name: 🔐 Authenticate to Google Cloud
         uses: google-github-actions/auth@v2
         with:
-          credentials_json: ${{ secrets.PROD_GCP_CREDENTIALS_JSON }}
+          workload_identity_provider: ${{ secrets.PROD_WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ secrets.PROD_SERVICE_ACCOUNT_EMAIL }}
 
       - name: ☁️ Setup Google Cloud SDK
         uses: google-github-actions/setup-gcloud@v1

@@ -243,12 +243,12 @@ resource "google_artifact_registry_repository" "dataflow" {
 # ============================================================================
 
 resource "google_cloudfunctions2_function" "dataflow_trigger" {
-  name            = "cricket-dataflow-trigger"
-  location        = var.gcp_region
-  description     = "Triggered by GCS finalization to launch Dataflow job"
+  name        = "cricket-dataflow-trigger"
+  location    = var.gcp_region
+  description = "Triggered by GCS finalization to launch Dataflow job"
   build_config {
-    runtime           = "python311"
-    entry_point       = "process_batting_file"
+    runtime     = "python311"
+    entry_point = "process_batting_file"
     source {
       storage_source {
         bucket = google_storage_bucket.raw_data.name
@@ -322,7 +322,7 @@ resource "google_cloud_run_service" "ingestion" {
     spec {
       service_account_email = google_service_account.cloud_run.email
       containers {
-        image = "gcr.io/cloud-builders/gke-deploy:stable"  # Placeholder - update with actual image
+        image = "gcr.io/cloud-builders/gke-deploy:stable" # Placeholder - update with actual image
         env {
           name  = "GCP_PROJECT"
           value = var.gcp_project_id
@@ -337,7 +337,7 @@ resource "google_cloud_run_service" "ingestion" {
         }
         env {
           name  = "RAPIDAPI_KEY"
-          value = ""  # Must be set via CI/CD secrets
+          value = "" # Must be set via CI/CD secrets
         }
       }
       timeout_seconds = 600
@@ -363,12 +363,12 @@ resource "google_cloud_scheduler_job" "ingestion_trigger" {
   project         = var.gcp_project_id
 
   http_target {
-    uri        = google_cloud_run_service.ingestion.status[0].url
+    uri         = google_cloud_run_service.ingestion.status[0].url
     http_method = "POST"
 
     oidc_token {
       service_account_email = google_service_account.cloud_run.email
-      audience             = google_cloud_run_service.ingestion.status[0].url
+      audience              = google_cloud_run_service.ingestion.status[0].url
     }
   }
 

@@ -158,8 +158,6 @@ jobs:
         with:
           workload_identity_provider: ${{ secrets.PROD_WORKLOAD_IDENTITY_PROVIDER }}
           service_account: ${{ secrets.PROD_SERVICE_ACCOUNT_EMAIL }}
-          token_format: access_token
-          access_token_lifetime: 3600s
 
       - name: ☁️ Setup Google Cloud SDK
         uses: google-github-actions/setup-gcloud@v1
@@ -217,8 +215,6 @@ jobs:
         with:
           workload_identity_provider: ${{ secrets.PROD_WORKLOAD_IDENTITY_PROVIDER }}
           service_account: ${{ secrets.PROD_SERVICE_ACCOUNT_EMAIL }}
-          token_format: access_token
-          access_token_lifetime: 3600s
 
       - name: ☁️ Setup Google Cloud SDK
         uses: google-github-actions/setup-gcloud@v1
@@ -299,8 +295,6 @@ jobs:
         with:
           workload_identity_provider: ${{ secrets.PROD_WORKLOAD_IDENTITY_PROVIDER }}
           service_account: ${{ secrets.PROD_SERVICE_ACCOUNT_EMAIL }}
-          token_format: access_token
-          access_token_lifetime: 3600s
 
       - name: ☁️ Setup Google Cloud SDK
         uses: google-github-actions/setup-gcloud@v1
@@ -350,8 +344,6 @@ jobs:
         with:
           workload_identity_provider: ${{ secrets.PROD_WORKLOAD_IDENTITY_PROVIDER }}
           service_account: ${{ secrets.PROD_SERVICE_ACCOUNT_EMAIL }}
-          token_format: access_token
-          access_token_lifetime: 3600s
 
       - name: ☁️ Setup Google Cloud SDK
         uses: google-github-actions/setup-gcloud@v1
@@ -410,8 +402,6 @@ jobs:
         with:
           workload_identity_provider: ${{ secrets.PROD_WORKLOAD_IDENTITY_PROVIDER }}
           service_account: ${{ secrets.PROD_SERVICE_ACCOUNT_EMAIL }}
-          token_format: access_token
-          access_token_lifetime: 3600s
 
       - name: ☁️ Setup Google Cloud SDK
         uses: google-github-actions/setup-gcloud@v1

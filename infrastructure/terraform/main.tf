@@ -263,7 +263,7 @@ resource "google_cloudfunctions2_function" "dataflow_trigger" {
   service_config {
     max_instance_count             = 10
     min_instance_count             = 1
-    available_memory_mb            = 512
+    memory_mb                      = 512
     timeout_seconds                = 600
     service_account_email          = google_service_account.cloud_function.email
     ingress_settings               = "INTERNAL_ONLY"
@@ -303,7 +303,7 @@ resource "google_eventarc_trigger" "gcs_to_dataflow" {
   }
 
   destination {
-    cloud_function_target {
+    cloud_function {
       function = google_cloudfunctions2_function.dataflow_trigger.id
     }
   }
@@ -324,8 +324,8 @@ resource "google_cloud_run_service" "ingestion" {
 
   template {
     spec {
-      service_account_email = google_service_account.cloud_run.email
-      timeout_seconds       = 600
+      service_account = google_service_account.cloud_run.email
+      timeout_seconds = 600
 
       containers {
         image = "gcr.io/cloud-builders/gke-deploy:stable"

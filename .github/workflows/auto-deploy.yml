@@ -680,7 +680,7 @@ jobs:
     needs: [verify-deployment]
     if: always()
     steps:
-      - name: 📧 Send Success Email
+      - name: 📧 Send Success Email (Python SMTP)
         if: needs.verify-deployment.result == 'success'
         env:
           GMAIL_APP_PASSWORD: ${{ secrets.GMAIL_APP_PASSWORD }}

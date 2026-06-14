@@ -153,6 +153,15 @@ jobs:
         with:
           terraform_version: ${{ env.TERRAFORM_VERSION }}
 
+      - name: 🔍 Debug Secrets
+        run: |
+          echo "Provider length: ${#PROD_WORKLOAD_IDENTITY_PROVIDER}"
+          echo "Provider value: $PROD_WORKLOAD_IDENTITY_PROVIDER"
+          echo "Account: $PROD_SERVICE_ACCOUNT_EMAIL"
+        env:
+          PROD_WORKLOAD_IDENTITY_PROVIDER: ${{ secrets.PROD_WORKLOAD_IDENTITY_PROVIDER }}
+          PROD_SERVICE_ACCOUNT_EMAIL: ${{ secrets.PROD_SERVICE_ACCOUNT_EMAIL }}
+
       - name: 🔐 Authenticate to Google Cloud
         uses: google-github-actions/auth@v2
         with:

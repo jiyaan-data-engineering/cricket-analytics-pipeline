@@ -1,38 +1,39 @@
 # 🎯 GCP Project Names for All Environments
 
-## Single GCP Project with Namespaced Resources
+## Three Separate GCP Projects (Recommended)
 
-**Main GCP Project:** `cricbuzz-satish-dev`
-
-All 3 environments (dev, staging, prod) are created within this SINGLE project using namespace prefixes.
+One dedicated GCP project for each environment with meaningful names.
 
 ---
 
-## Development Environment (DEV)
+## 🟢 Development Environment (DEV)
 
-**Project ID:** `cricbuzz-satish-dev`
+**GCP Project ID:** `cricket-analytics-dev`
 
-**Namespace Prefix:** `dev_` (datasets) and `dev-` (buckets)
+**Project Number:** (Get from GCP Console → Project Settings)
 
 ### GCS Buckets:
 ```
-gs://dev-cricket-raw-data
-gs://dev-cricket-dataflow-templates
-gs://dev-cricket-dataflow-temp
-gs://dev-cricket-tf-state
+gs://cricket-raw-data-dev
+gs://cricket-dataflow-templates-dev
+gs://cricket-dataflow-temp-dev
+gs://cricket-tf-state-dev
 ```
 
 ### BigQuery Datasets:
 ```
-dev_cricket_raw
-dev_cricket_staging
-dev_cricket_curated
-dev_cricket_audit_logs
+cricket_raw
+cricket_staging
+cricket_curated
+cricket_audit_logs
 ```
 
-### Service Account:
+### Service Accounts:
 ```
-cricket-dataflow-sa@cricbuzz-satish-dev.iam.gserviceaccount.com
+cricket-dataflow-sa@cricket-analytics-dev.iam.gserviceaccount.com
+cricket-cloud-function-sa@cricket-analytics-dev.iam.gserviceaccount.com
+cricket-cloud-run-sa@cricket-analytics-dev.iam.gserviceaccount.com
+cricket-composer-sa@cricket-analytics-dev.iam.gserviceaccount.com
 ```
 
 ### Terraform Config:
@@ -40,33 +41,44 @@ cricket-dataflow-sa@cricbuzz-satish-dev.iam.gserviceaccount.com
 infrastructure/terraform/environments/dev.tfvars
 ```
 
+### GitHub Secrets (for DEV):
+```
+DEV_GCP_PROJECT_ID = cricket-analytics-dev
+DEV_SERVICE_ACCOUNT_EMAIL = cricket-dataflow-sa@cricket-analytics-dev.iam.gserviceaccount.com
+DEV_WORKLOAD_IDENTITY_PROVIDER = projects/PROJECT_NUMBER/locations/global/workloadIdentityPools/github-actions-pool/providers/github-provider
+DEV_TF_STATE_BUCKET = cricket-tf-state-dev
+```
+
 ---
 
-## Staging Environment (STG)
+## 🟡 Staging Environment (STG)
 
-**Project ID:** `cricbuzz-satish-dev` (SAME PROJECT)
+**GCP Project ID:** `cricket-analytics-stg`
 
-**Namespace Prefix:** `stg_` (datasets) and `stg-` (buckets)
+**Project Number:** (Get from GCP Console → Project Settings)
 
 ### GCS Buckets:
 ```
-gs://stg-cricket-raw-data
-gs://stg-cricket-dataflow-templates
-gs://stg-cricket-dataflow-temp
-gs://stg-cricket-tf-state
+gs://cricket-raw-data-stg
+gs://cricket-dataflow-templates-stg
+gs://cricket-dataflow-temp-stg
+gs://cricket-tf-state-stg
 ```
 
 ### BigQuery Datasets:
 ```
-stg_cricket_raw
-stg_cricket_staging
-stg_cricket_curated
-stg_cricket_audit_logs
+cricket_raw
+cricket_staging
+cricket_curated
+cricket_audit_logs
 ```
 
-### Service Account:
+### Service Accounts:
 ```
-cricket-dataflow-sa@cricbuzz-satish-dev.iam.gserviceaccount.com (shared)
+cricket-dataflow-sa@cricket-analytics-stg.iam.gserviceaccount.com
+cricket-cloud-function-sa@cricket-analytics-stg.iam.gserviceaccount.com
+cricket-cloud-run-sa@cricket-analytics-stg.iam.gserviceaccount.com
+cricket-composer-sa@cricket-analytics-stg.iam.gserviceaccount.com
 ```
 
 ### Terraform Config:
@@ -74,38 +86,57 @@ cricket-dataflow-sa@cricbuzz-satish-dev.iam.gserviceaccount.com (shared)
 infrastructure/terraform/environments/stg.tfvars
 ```
 
+### GitHub Secrets (for STG):
+```
+STG_GCP_PROJECT_ID = cricket-analytics-stg
+STG_SERVICE_ACCOUNT_EMAIL = cricket-dataflow-sa@cricket-analytics-stg.iam.gserviceaccount.com
+STG_WORKLOAD_IDENTITY_PROVIDER = projects/PROJECT_NUMBER/locations/global/workloadIdentityPools/github-actions-pool/providers/github-provider
+STG_TF_STATE_BUCKET = cricket-tf-state-stg
+```
+
 ---
 
-## Production Environment (PROD)
+## 🔴 Production Environment (PROD)
 
-**Project ID:** `cricbuzz-satish-dev` (SAME PROJECT)
+**GCP Project ID:** `cricket-analytics-prod`
 
-**Namespace Prefix:** `prod_` (datasets) and `prod-` (buckets)
+**Project Number:** (Get from GCP Console → Project Settings)
 
 ### GCS Buckets:
 ```
-gs://prod-cricket-raw-data
-gs://prod-cricket-dataflow-templates
-gs://prod-cricket-dataflow-temp
-gs://prod-cricket-tf-state
+gs://cricket-raw-data-prod
+gs://cricket-dataflow-templates-prod
+gs://cricket-dataflow-temp-prod
+gs://cricket-tf-state-prod
 ```
 
 ### BigQuery Datasets:
 ```
-prod_cricket_raw
-prod_cricket_staging
-prod_cricket_curated
-prod_cricket_audit_logs
+cricket_raw
+cricket_staging
+cricket_curated
+cricket_audit_logs
 ```
 
-### Service Account:
+### Service Accounts:
 ```
-cricket-dataflow-sa@cricbuzz-satish-dev.iam.gserviceaccount.com (shared)
+cricket-dataflow-sa@cricket-analytics-prod.iam.gserviceaccount.com
+cricket-cloud-function-sa@cricket-analytics-prod.iam.gserviceaccount.com
+cricket-cloud-run-sa@cricket-analytics-prod.iam.gserviceaccount.com
+cricket-composer-sa@cricket-analytics-prod.iam.gserviceaccount.com
 ```
 
 ### Terraform Config:
 ```
 infrastructure/terraform/environments/prod.tfvars
+```
+
+### GitHub Secrets (for PROD):
+```
+PROD_GCP_PROJECT_ID = cricket-analytics-prod
+PROD_SERVICE_ACCOUNT_EMAIL = cricket-dataflow-sa@cricket-analytics-prod.iam.gserviceaccount.com
+PROD_WORKLOAD_IDENTITY_PROVIDER = projects/PROJECT_NUMBER/locations/global/workloadIdentityPools/github-actions-pool/providers/github-provider
+PROD_TF_STATE_BUCKET = cricket-tf-state-prod
 ```
 
 ---
@@ -114,10 +145,10 @@ infrastructure/terraform/environments/prod.tfvars
 
 | Aspect | Development | Staging | Production |
 |--------|-------------|---------|-----------|
-| **GCP Project** | cricbuzz-satish-dev | cricbuzz-satish-dev | cricbuzz-satish-dev |
-| **Dataset Prefix** | dev_ | stg_ | prod_ |
-| **Bucket Prefix** | dev- | stg- | prod- |
-| **Service Account** | cricket-dataflow-sa (shared) | cricket-dataflow-sa (shared) | cricket-dataflow-sa (shared) |
+| **GCP Project** | cricket-analytics-dev | cricket-analytics-stg | cricket-analytics-prod |
+| **Dataset Names** | cricket_raw, cricket_staging, cricket_curated, cricket_audit_logs | Same | Same |
+| **Bucket Prefix** | cricket-*-dev | cricket-*-stg | cricket-*-prod |
+| **Service Accounts** | 4 per project | 4 per project | 4 per project |
 | **Dataflow Workers** | 2 | 3 | 5 |
 | **Monitoring** | Disabled | Limited | Full |
 | **Backups** | No | Daily | Hourly |
@@ -131,18 +162,18 @@ GitHub Actions Workflow Push
          ↓
    develop branch
          ↓
-   Deploy to DEV
+   Deploy to cricket-analytics-dev (DEV)
    
    Create v1.0.0 tag
          ↓
-   Deploy to STAGING
+   Deploy to cricket-analytics-stg (STAGING)
    
    Create release-v1.0.0 tag
          ↓
-   Deploy to PRODUCTION
+   Deploy to cricket-analytics-prod (PRODUCTION)
 ```
 
-All three deployments go to the **same GCP project** (`cricbuzz-satish-dev`), but use different namespace prefixes to keep resources isolated.
+Each environment has its **own dedicated GCP project** with completely isolated resources.
 
 ---
 
@@ -150,31 +181,38 @@ All three deployments go to the **same GCP project** (`cricbuzz-satish-dev`), bu
 
 ### Deploy to DEV:
 ```bash
+gcloud config set project cricket-analytics-dev
 terraform apply -var-file="environments/dev.tfvars"
 ```
 
 ### Deploy to STAGING:
 ```bash
+gcloud config set project cricket-analytics-stg
 terraform apply -var-file="environments/stg.tfvars"
 ```
 
 ### Deploy to PRODUCTION:
 ```bash
+gcloud config set project cricket-analytics-prod
 terraform apply -var-file="environments/prod.tfvars"
 ```
 
-All commands target the **same project** but create namespaced resources (dev_*, stg_*, prod_*).
+Each command targets its **own GCP project** (`-dev`, `-stg`, `-prod`).
 
 ---
 
-## Benefits of Single Project with Namespaces
+## Benefits of Separate Projects per Environment
 
-✅ **Cost Effective** - One project = lower overhead  
-✅ **Easy Management** - All environments in one place  
-✅ **Shared Resources** - Service accounts, APIs, billing  
-✅ **Clear Isolation** - Prefix naming keeps resources distinct  
-✅ **Simple Setup** - No need to manage multiple projects  
+✅ **Complete Isolation** - No risk of cross-environment data leaks  
+✅ **Independent Billing** - Track costs per environment separately  
+✅ **Separate IAM** - Different access controls for each environment  
+✅ **Environment Protection** - Production project gets stricter controls  
+✅ **Clear Boundaries** - No namespace conflicts or naming issues  
+✅ **Organizational Clarity** - Easy to understand project structure  
 
 ---
 
-**Remember:** The project is `cricbuzz-satish-dev` for all environments!
+**Remember:** Three separate GCP projects:
+- 🟢 **Development**: `cricket-analytics-dev`
+- 🟡 **Staging**: `cricket-analytics-stg`
+- 🔴 **Production**: `cricket-analytics-prod`

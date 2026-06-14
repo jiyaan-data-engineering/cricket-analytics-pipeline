@@ -1,41 +1,94 @@
 # 📋 GCP Setup Checklist for Multi-Environment Deployment
 
-Complete checklist of all GCP resources and configurations needed for dev, staging, and production environments.
+Complete checklist of all GCP resources and configurations needed for dev, staging, and production environments using **THREE separate GCP projects**.
 
 ---
 
 ## 🎯 Overview
 
 You need to set up:
-- **1 GCP Project** (cricbuzz-satish-dev) - Used for all 3 environments
-- **3 Environments** (dev/stg/prod) - Using namespace prefixes
-- **12 Service Accounts** (4 per environment)
-- **APIs** - Enable required GCP services
-- **Workload Identity** - For GitHub Actions authentication
-- **Storage & Data** - GCS buckets and BigQuery datasets
+- **3 GCP Projects** (separate projects for each environment)
+  - `cricket-analytics-dev` (Development)
+  - `cricket-analytics-stg` (Staging)
+  - `cricket-analytics-prod` (Production)
+- **Service Accounts** (4 per project)
+- **APIs** - Enable required GCP services in each project
+- **Workload Identity** - For GitHub Actions authentication (per project)
+- **Storage & Data** - GCS buckets and BigQuery datasets (per project)
 - **IAM Roles** - Proper permissions for each service account
 
 ---
 
-## ✅ Phase 1: ONE-TIME SETUP (Single project)
+## ✅ Phase 1: CREATE THREE GCP PROJECTS
 
-### **1.1 Create GCP Project** (if not already done)
-- [ ] Open Google Cloud Console: https://console.cloud.google.com
-- [ ] Click "Select a Project" → "New Project"
-- [ ] Project name: `cricket-analytics-platform`
-- [ ] Note the **Project ID**: `cricbuzz-satish-dev` (or your project ID)
-- [ ] Store in safe place - you'll need it repeatedly
+### **1.1 Create Development Project (cricket-analytics-dev)**
 
-**Get Project ID:**
 ```bash
-gcloud config get-value project
-# Output: cricbuzz-satish-dev
+# Set organization/folder if needed (optional)
+FOLDER_ID="YOUR_FOLDER_ID"  # Leave empty if using org root
+
+# Create project
+gcloud projects create cricket-analytics-dev \
+  --name="Cricket Analytics - Development" \
+  --set-as-default
+
+# Get Project ID and Number
+DEV_PROJECT_ID=$(gcloud config get-value project)
+DEV_PROJECT_NUMBER=$(gcloud projects describe $DEV_PROJECT_ID --format='value(projectNumber)')
+
+echo "DEV Project ID: $DEV_PROJECT_ID"
+echo "DEV Project Number: $DEV_PROJECT_NUMBER"
 ```
 
-### **1.2 Enable Required APIs**
-Enable these APIs in GCP Console or via gcloud:
+- [ ] `cricket-analytics-dev` project created
+- [ ] Project ID saved: ___________________________
+- [ ] Project Number saved: ___________________________
+
+### **1.2 Create Staging Project (cricket-analytics-stg)**
 
 ```bash
+gcloud projects create cricket-analytics-stg \
+  --name="Cricket Analytics - Staging"
+
+STG_PROJECT_ID="cricket-analytics-stg"
+STG_PROJECT_NUMBER=$(gcloud projects describe $STG_PROJECT_ID --format='value(projectNumber)')
+
+echo "STG Project ID: $STG_PROJECT_ID"
+echo "STG Project Number: $STG_PROJECT_NUMBER"
+```
+
+- [ ] `cricket-analytics-stg` project created
+- [ ] Project ID saved: ___________________________
+- [ ] Project Number saved: ___________________________
+
+### **1.3 Create Production Project (cricket-analytics-prod)**
+
+```bash
+gcloud projects create cricket-analytics-prod \
+  --name="Cricket Analytics - Production"
+
+PROD_PROJECT_ID="cricket-analytics-prod"
+PROD_PROJECT_NUMBER=$(gcloud projects describe $PROD_PROJECT_ID --format='value(projectNumber)')
+
+echo "PROD Project ID: $PROD_PROJECT_ID"
+echo "PROD Project Number: $PROD_PROJECT_NUMBER"
+```
+
+- [ ] `cricket-analytics-prod` project created
+- [ ] Project ID saved: ___________________________
+- [ ] Project Number saved: ___________________________
+
+---
+
+## ✅ Phase 2: DEVELOPMENT ENVIRONMENT SETUP
+
+### **2.1 Enable APIs in Development Project**
+
+```bash
+# Switch to DEV project
+gcloud config set project cricket-analytics-dev
+
+# Enable all required APIs
 gcloud services enable \
   bigquery.googleapis.com \
   storage-api.googleapis.com \
@@ -50,10 +103,8 @@ gcloud services enable \
   monitoring.googleapis.com \
   iam.googleapis.com \
   iap.googleapis.com
-```
 
-**Verify APIs are enabled:**
-```bash
+# Verify APIs
 gcloud services list --enabled | grep -E "bigquery|storage|dataflow|scheduler|functions|run|composer"
 ```
 
@@ -70,94 +121,73 @@ gcloud services list --enabled | grep -E "bigquery|storage|dataflow|scheduler|fu
 - [ ] Cloud Monitoring API ✅
 - [ ] IAM API ✅
 
-### **1.3 Set Up Workload Identity Federation (GitHub → GCP Auth)**
-
-This allows GitHub Actions to authenticate without service account keys!
+### **2.2 Set Up Workload Identity Federation (Development)**
 
 ```bash
-# Set variables
-PROJECT_ID="cricbuzz-satish-dev"
+DEV_PROJECT_ID="cricket-analytics-dev"
 POOL_NAME="github-actions-pool"
 PROVIDER_NAME="github-provider"
 
 # 1. Create Workload Identity Pool
 gcloud iam workload-identity-pools create $POOL_NAME \
-  --project=$PROJECT_ID \
+  --project=$DEV_PROJECT_ID \
   --location=global \
   --display-name="GitHub Actions Pool"
 
 # 2. Get Pool Resource Name
 POOL_RESOURCE=$(gcloud iam workload-identity-pools describe $POOL_NAME \
-  --project=$PROJECT_ID \
+  --project=$DEV_PROJECT_ID \
   --location=global \
   --format='value(name)')
 
-echo "Pool Resource: $POOL_RESOURCE"
-# Output: projects/YOUR_PROJECT_NUMBER/locations/global/workloadIdentityPools/github-actions-pool
+echo "DEV Pool Resource: $POOL_RESOURCE"
 
 # 3. Create Workload Identity Provider
 gcloud iam workload-identity-pools providers create-oidc $PROVIDER_NAME \
-  --project=$PROJECT_ID \
+  --project=$DEV_PROJECT_ID \
   --location=global \
   --workload-identity-pool=$POOL_NAME \
   --display-name="GitHub Provider" \
   --attribute-mapping="google.subject=assertion.sub,attribute.actor=assertion.actor,attribute.repository=assertion.repository,attribute.repository_owner=assertion.repository_owner" \
   --issuer-uri="https://token.actions.githubusercontent.com"
 
-# 4. Get Provider Resource Name (you'll need this for GitHub Secrets!)
-PROVIDER_RESOURCE=$(gcloud iam workload-identity-pools providers describe $PROVIDER_NAME \
-  --project=$PROJECT_ID \
+# 4. Get Provider Resource Name
+DEV_PROVIDER_RESOURCE=$(gcloud iam workload-identity-pools providers describe $PROVIDER_NAME \
+  --project=$DEV_PROJECT_ID \
   --location=global \
   --workload-identity-pool=$POOL_NAME \
   --format='value(name)')
 
-echo "Provider Resource: $PROVIDER_RESOURCE"
-# Output: projects/YOUR_PROJECT_NUMBER/locations/global/workloadIdentityPools/github-actions-pool/providers/github-provider
+echo "DEV Provider Resource: $DEV_PROVIDER_RESOURCE"
 ```
-
-**Save this Provider Resource** - You'll use it for all 3 environments!
 
 - [ ] Workload Identity Pool created: `github-actions-pool`
 - [ ] Workload Identity Provider created: `github-provider`
-- [ ] Provider Resource saved: `projects/.../providers/github-provider`
+- [ ] DEV Provider Resource saved: ___________________________
 
----
+### **2.3 Create Service Accounts (Development)**
 
-## ✅ Phase 2: DEVELOPMENT ENVIRONMENT SETUP
-
-### **2.1 Create Development Service Accounts**
-
-**Service Account 1: Dataflow**
 ```bash
+DEV_PROJECT_ID="cricket-analytics-dev"
+
+# Dataflow Service Account
 gcloud iam service-accounts create cricket-dataflow-sa \
-  --project=cricbuzz-satish-dev \
+  --project=$DEV_PROJECT_ID \
   --display-name="Cricket Analytics Dataflow SA"
 
-# Get email
-gcloud iam service-accounts describe cricket-dataflow-sa@cricbuzz-satish-dev.iam.gserviceaccount.com \
-  --project=cricbuzz-satish-dev
-
-# Output: cricket-dataflow-sa@cricbuzz-satish-dev.iam.gserviceaccount.com
-```
-
-**Service Account 2: Cloud Function**
-```bash
+# Cloud Function Service Account
 gcloud iam service-accounts create cricket-cloud-function-sa \
-  --project=cricbuzz-satish-dev \
+  --project=$DEV_PROJECT_ID \
   --display-name="Cricket Analytics Cloud Function SA"
-```
 
-**Service Account 3: Cloud Run**
-```bash
+# Cloud Run Service Account
 gcloud iam service-accounts create cricket-cloud-run-sa \
-  --project=cricbuzz-satish-dev \
+  --project=$DEV_PROJECT_ID \
   --display-name="Cricket Analytics Cloud Run SA"
-```
 
-**Service Account 4: Cloud Composer**
-```bash
+# Cloud Composer Service Account
 gcloud iam service-accounts create cricket-composer-sa \
-  --project=cricbuzz-satish-dev \
+  --project=$DEV_PROJECT_ID \
   --display-name="Cricket Analytics Cloud Composer SA"
 ```
 
@@ -166,99 +196,55 @@ gcloud iam service-accounts create cricket-composer-sa \
 - [ ] cricket-cloud-run-sa created
 - [ ] cricket-composer-sa created
 
-### **2.2 Grant IAM Roles to Dataflow Service Account**
+### **2.4 Grant IAM Roles to Service Accounts (Development)**
 
 ```bash
-PROJECT_ID="cricbuzz-satish-dev"
-SA_EMAIL="cricket-dataflow-sa@cricbuzz-satish-dev.iam.gserviceaccount.com"
+DEV_PROJECT_ID="cricket-analytics-dev"
+DATAFLOW_SA="cricket-dataflow-sa@${DEV_PROJECT_ID}.iam.gserviceaccount.com"
+CF_SA="cricket-cloud-function-sa@${DEV_PROJECT_ID}.iam.gserviceaccount.com"
+COMPOSER_SA="cricket-composer-sa@${DEV_PROJECT_ID}.iam.gserviceaccount.com"
 
-# BigQuery Admin
-gcloud projects add-iam-policy-binding $PROJECT_ID \
-  --member=serviceAccount:$SA_EMAIL \
-  --role=roles/bigquery.admin
+# Dataflow SA roles
+gcloud projects add-iam-policy-binding $DEV_PROJECT_ID \
+  --member=serviceAccount:$DATAFLOW_SA --role=roles/bigquery.admin
+gcloud projects add-iam-policy-binding $DEV_PROJECT_ID \
+  --member=serviceAccount:$DATAFLOW_SA --role=roles/storage.admin
+gcloud projects add-iam-policy-binding $DEV_PROJECT_ID \
+  --member=serviceAccount:$DATAFLOW_SA --role=roles/dataflow.admin
+gcloud projects add-iam-policy-binding $DEV_PROJECT_ID \
+  --member=serviceAccount:$DATAFLOW_SA --role=roles/compute.instanceServiceAccount
+gcloud projects add-iam-policy-binding $DEV_PROJECT_ID \
+  --member=serviceAccount:$DATAFLOW_SA --role=roles/dataflow.worker
 
-# Storage Admin
-gcloud projects add-iam-policy-binding $PROJECT_ID \
-  --member=serviceAccount:$SA_EMAIL \
-  --role=roles/storage.admin
+# Cloud Function SA roles
+gcloud projects add-iam-policy-binding $DEV_PROJECT_ID \
+  --member=serviceAccount:$CF_SA --role=roles/dataflow.admin
+gcloud projects add-iam-policy-binding $DEV_PROJECT_ID \
+  --member=serviceAccount:$CF_SA --role=roles/iam.serviceAccountUser
 
-# Dataflow Admin
-gcloud projects add-iam-policy-binding $PROJECT_ID \
-  --member=serviceAccount:$SA_EMAIL \
-  --role=roles/dataflow.admin
-
-# Compute Instance Service Account
-gcloud projects add-iam-policy-binding $PROJECT_ID \
-  --member=serviceAccount:$SA_EMAIL \
-  --role=roles/compute.instanceServiceAccount
-
-# Dataflow Worker
-gcloud projects add-iam-policy-binding $PROJECT_ID \
-  --member=serviceAccount:$SA_EMAIL \
-  --role=roles/dataflow.worker
+# Cloud Composer SA roles
+gcloud projects add-iam-policy-binding $DEV_PROJECT_ID \
+  --member=serviceAccount:$COMPOSER_SA --role=roles/bigquery.admin
+gcloud projects add-iam-policy-binding $DEV_PROJECT_ID \
+  --member=serviceAccount:$COMPOSER_SA --role=roles/storage.admin
+gcloud projects add-iam-policy-binding $DEV_PROJECT_ID \
+  --member=serviceAccount:$COMPOSER_SA --role=roles/dataflow.admin
 ```
 
-- [ ] BigQuery Admin role granted to dataflow-sa
-- [ ] Storage Admin role granted to dataflow-sa
-- [ ] Dataflow Admin role granted to dataflow-sa
-- [ ] Compute Instance Service Account role granted
-- [ ] Dataflow Worker role granted
+- [ ] Dataflow SA: BigQuery Admin, Storage Admin, Dataflow Admin, Compute Instance SA, Dataflow Worker
+- [ ] Cloud Function SA: Dataflow Admin, Service Account User
+- [ ] Cloud Composer SA: BigQuery Admin, Storage Admin, Dataflow Admin
 
-### **2.3 Grant IAM Roles to Cloud Function Service Account**
+### **2.5 Set Up GitHub Actions Authentication (Development)**
 
 ```bash
-SA_EMAIL="cricket-cloud-function-sa@cricbuzz-satish-dev.iam.gserviceaccount.com"
-
-# Dataflow Admin
-gcloud projects add-iam-policy-binding $PROJECT_ID \
-  --member=serviceAccount:$SA_EMAIL \
-  --role=roles/dataflow.admin
-
-# Service Account User (to impersonate dataflow SA)
-gcloud projects add-iam-policy-binding $PROJECT_ID \
-  --member=serviceAccount:$SA_EMAIL \
-  --role=roles/iam.serviceAccountUser
-```
-
-- [ ] Dataflow Admin role granted to cloud-function-sa
-- [ ] Service Account User role granted to cloud-function-sa
-
-### **2.4 Grant IAM Roles to Cloud Composer Service Account**
-
-```bash
-SA_EMAIL="cricket-composer-sa@cricbuzz-satish-dev.iam.gserviceaccount.com"
-
-# BigQuery Admin
-gcloud projects add-iam-policy-binding $PROJECT_ID \
-  --member=serviceAccount:$SA_EMAIL \
-  --role=roles/bigquery.admin
-
-# Storage Admin
-gcloud projects add-iam-policy-binding $PROJECT_ID \
-  --member=serviceAccount:$SA_EMAIL \
-  --role=roles/storage.admin
-
-# Dataflow Admin
-gcloud projects add-iam-policy-binding $PROJECT_ID \
-  --member=serviceAccount:$SA_EMAIL \
-  --role=roles/dataflow.admin
-```
-
-- [ ] BigQuery Admin role granted to composer-sa
-- [ ] Storage Admin role granted to composer-sa
-- [ ] Dataflow Admin role granted to composer-sa
-
-### **2.5 Set Up GitHub Actions Authentication (DEV)**
-
-Allow GitHub to assume the dataflow service account:
-
-```bash
+DEV_PROJECT_ID="cricket-analytics-dev"
 GITHUB_REPO="your-username/cricket-analytics-pipeline"
-PROVIDER_RESOURCE="projects/YOUR_PROJECT_NUMBER/locations/global/workloadIdentityPools/github-actions-pool/providers/github-provider"
+DEV_PROVIDER_RESOURCE="projects/YOUR_PROJECT_NUMBER/locations/global/workloadIdentityPools/github-actions-pool/providers/github-provider"
 
 gcloud iam service-accounts add-iam-policy-binding \
-  cricket-dataflow-sa@cricbuzz-satish-dev.iam.gserviceaccount.com \
-  --project=cricbuzz-satish-dev \
+  cricket-dataflow-sa@${DEV_PROJECT_ID}.iam.gserviceaccount.com \
+  --project=$DEV_PROJECT_ID \
   --role=roles/iam.workloadIdentityUser \
   --condition='resource.name.startsWith("principalSet://goog/github/repo/$GITHUB_REPO")' \
   --member=principalSet://goog/github/repo/$GITHUB_REPO
@@ -266,262 +252,301 @@ gcloud iam service-accounts add-iam-policy-binding \
 
 - [ ] GitHub Actions allowed to use dataflow-sa (DEV)
 
-### **2.6 Create GCS Buckets (DEV)**
+### **2.6 Create GCS Buckets (Development)**
 
 ```bash
-PROJECT_ID="cricbuzz-satish-dev"
+DEV_PROJECT_ID="cricket-analytics-dev"
 
-# Raw Data Bucket
-gsutil mb -p $PROJECT_ID -l us-central1 gs://dev-cricket-raw-data
-
-# Dataflow Templates Bucket
-gsutil mb -p $PROJECT_ID -l us-central1 gs://dev-cricket-dataflow-templates
-
-# Dataflow Temp Bucket
-gsutil mb -p $PROJECT_ID -l us-central1 gs://dev-cricket-dataflow-temp
-
-# Terraform State Bucket
-gsutil mb -p $PROJECT_ID -l us-central1 gs://dev-cricket-tf-state
+gsutil mb -p $DEV_PROJECT_ID -l us-central1 gs://cricket-raw-data-dev
+gsutil mb -p $DEV_PROJECT_ID -l us-central1 gs://cricket-dataflow-templates-dev
+gsutil mb -p $DEV_PROJECT_ID -l us-central1 gs://cricket-dataflow-temp-dev
+gsutil mb -p $DEV_PROJECT_ID -l us-central1 gs://cricket-tf-state-dev
 
 # Enable versioning on state bucket
-gsutil versioning set on gs://dev-cricket-tf-state
+gsutil versioning set on gs://cricket-tf-state-dev
+
+# Verify
+gsutil ls -p $DEV_PROJECT_ID | grep cricket
 ```
 
-**Verify buckets:**
-```bash
-gsutil ls | grep dev-cricket
-```
+- [ ] gs://cricket-raw-data-dev created
+- [ ] gs://cricket-dataflow-templates-dev created
+- [ ] gs://cricket-dataflow-temp-dev created
+- [ ] gs://cricket-tf-state-dev created with versioning
 
-- [ ] gs://dev-cricket-raw-data created
-- [ ] gs://dev-cricket-dataflow-templates created
-- [ ] gs://dev-cricket-dataflow-temp created
-- [ ] gs://dev-cricket-tf-state created with versioning
-
-### **2.7 Create BigQuery Datasets (DEV)**
+### **2.7 Create BigQuery Datasets (Development)**
 
 ```bash
-PROJECT_ID="cricbuzz-satish-dev"
+DEV_PROJECT_ID="cricket-analytics-dev"
 
-# Raw Dataset
-bq mk --project_id=$PROJECT_ID \
+bq mk --project_id=$DEV_PROJECT_ID \
   --dataset \
   --location=us-central1 \
   --description="Raw data layer - DEV" \
-  dev_cricket_raw
+  cricket_raw
 
-# Staging Dataset
-bq mk --project_id=$PROJECT_ID \
+bq mk --project_id=$DEV_PROJECT_ID \
   --dataset \
   --location=us-central1 \
   --description="Staging layer - DEV" \
-  dev_cricket_staging
+  cricket_staging
 
-# Curated Dataset
-bq mk --project_id=$PROJECT_ID \
+bq mk --project_id=$DEV_PROJECT_ID \
   --dataset \
   --location=us-central1 \
   --description="Curated layer - DEV" \
-  dev_cricket_curated
+  cricket_curated
 
-# Audit Logs Dataset
-bq mk --project_id=$PROJECT_ID \
+bq mk --project_id=$DEV_PROJECT_ID \
   --dataset \
   --location=us-central1 \
   --description="Audit logs - DEV" \
-  dev_cricket_audit_logs
+  cricket_audit_logs
+
+# Verify
+bq ls --project_id=$DEV_PROJECT_ID
 ```
 
-**Verify datasets:**
-```bash
-bq ls --project_id=$PROJECT_ID | grep dev_
-```
-
-- [ ] dev_cricket_raw dataset created
-- [ ] dev_cricket_staging dataset created
-- [ ] dev_cricket_curated dataset created
-- [ ] dev_cricket_audit_logs dataset created
+- [ ] cricket_raw dataset created
+- [ ] cricket_staging dataset created
+- [ ] cricket_curated dataset created
+- [ ] cricket_audit_logs dataset created
 
 ---
 
 ## ✅ Phase 3: STAGING ENVIRONMENT SETUP
 
-Repeat Phase 2 but with `stg-` prefix instead of `dev-`:
+Repeat Phase 2 with `cricket-analytics-stg` project:
 
-- [ ] cricket-dataflow-sa service account (or create new if needed)
-- [ ] gs://stg-cricket-raw-data bucket
-- [ ] gs://stg-cricket-dataflow-templates bucket
-- [ ] gs://stg-cricket-dataflow-temp bucket
-- [ ] gs://stg-cricket-tf-state bucket (with versioning)
-- [ ] stg_cricket_raw dataset
-- [ ] stg_cricket_staging dataset
-- [ ] stg_cricket_curated dataset
-- [ ] stg_cricket_audit_logs dataset
+```bash
+# Switch to STG project
+gcloud config set project cricket-analytics-stg
+
+# Run the same steps as Phase 2.1 through 2.7, but with:
+# - Project ID: cricket-analytics-stg
+# - Bucket names: cricket-*-stg (not -dev)
+```
+
+- [ ] All APIs enabled in cricket-analytics-stg
+- [ ] Workload Identity Pool & Provider created (STG)
+- [ ] 4 Service Accounts created (STG)
+- [ ] IAM Roles granted to all SAs (STG)
 - [ ] GitHub Actions authentication set up (STG)
+- [ ] 4 GCS Buckets created (STG)
+- [ ] 4 BigQuery Datasets created (STG)
+- [ ] STG Provider Resource saved: ___________________________
 
 ---
 
 ## ✅ Phase 4: PRODUCTION ENVIRONMENT SETUP
 
-Repeat Phase 2 but with `prod-` prefix instead of `dev-`:
+Repeat Phase 2 with `cricket-analytics-prod` project:
 
-- [ ] cricket-dataflow-sa service account (or create new if needed)
-- [ ] gs://prod-cricket-raw-data bucket (with versioning enabled)
-- [ ] gs://prod-cricket-dataflow-templates bucket (with versioning)
-- [ ] gs://prod-cricket-dataflow-temp bucket
-- [ ] gs://prod-cricket-tf-state bucket (with versioning)
-- [ ] prod_cricket_raw dataset
-- [ ] prod_cricket_staging dataset
-- [ ] prod_cricket_curated dataset
-- [ ] prod_cricket_audit_logs dataset
+```bash
+# Switch to PROD project
+gcloud config set project cricket-analytics-prod
+
+# Run the same steps as Phase 2.1 through 2.7, but with:
+# - Project ID: cricket-analytics-prod
+# - Bucket names: cricket-*-prod (not -dev)
+```
+
+**Additional PROD-only steps:**
+
+```bash
+PROD_PROJECT_ID="cricket-analytics-prod"
+
+# Enable versioning on all prod buckets (for backup)
+gsutil versioning set on gs://cricket-raw-data-prod
+gsutil versioning set on gs://cricket-dataflow-templates-prod
+```
+
+- [ ] All APIs enabled in cricket-analytics-prod
+- [ ] Workload Identity Pool & Provider created (PROD)
+- [ ] 4 Service Accounts created (PROD)
+- [ ] IAM Roles granted to all SAs (PROD)
 - [ ] GitHub Actions authentication set up (PROD)
-- [ ] Enable backups for prod datasets
-- [ ] Enable monitoring/alerts for prod
+- [ ] 4 GCS Buckets created (PROD) with versioning
+- [ ] 4 BigQuery Datasets created (PROD)
+- [ ] PROD Provider Resource saved: ___________________________
 
 ---
 
 ## 📋 VERIFICATION CHECKLIST
 
-### **APIs Check**
+### **Projects Check**
 ```bash
+gcloud projects list --filter="name:cricket-analytics"
+```
+
+Should show:
+- [ ] cricket-analytics-dev
+- [ ] cricket-analytics-stg
+- [ ] cricket-analytics-prod
+
+### **APIs Check (per project)**
+```bash
+# For each project
+gcloud config set project cricket-analytics-dev
 gcloud services list --enabled | grep -E "bigquery|storage|dataflow|scheduler|functions|run|composer"
 ```
-- [ ] All 12 APIs are enabled
 
-### **Service Accounts Check**
+- [ ] All 12 APIs enabled in DEV
+- [ ] All 12 APIs enabled in STG
+- [ ] All 12 APIs enabled in PROD
+
+### **Service Accounts Check (per project)**
 ```bash
+gcloud config set project cricket-analytics-dev
 gcloud iam service-accounts list --filter="displayName:cricket"
 ```
-Should show:
+
+Should show 4 service accounts in each project:
 - [ ] cricket-dataflow-sa
 - [ ] cricket-cloud-function-sa
 - [ ] cricket-cloud-run-sa
 - [ ] cricket-composer-sa
 
-### **GCS Buckets Check**
+### **GCS Buckets Check (per project)**
 ```bash
-gsutil ls | grep cricket
+gcloud config set project cricket-analytics-dev
+gsutil ls -p cricket-analytics-dev
 ```
+
 Should show:
-- [ ] dev-cricket-* (4 buckets)
-- [ ] stg-cricket-* (4 buckets)
-- [ ] prod-cricket-* (4 buckets)
+- [ ] cricket-raw-data-dev
+- [ ] cricket-dataflow-templates-dev
+- [ ] cricket-dataflow-temp-dev
+- [ ] cricket-tf-state-dev
 
-### **BigQuery Datasets Check**
+**Repeat for -stg and -prod**
+
+### **BigQuery Datasets Check (per project)**
 ```bash
-bq ls --project_id=cricbuzz-satish-dev
+gcloud config set project cricket-analytics-dev
+bq ls --project_id=cricket-analytics-dev
 ```
+
 Should show:
-- [ ] dev_cricket_raw, dev_cricket_staging, dev_cricket_curated, dev_cricket_audit_logs
-- [ ] stg_cricket_raw, stg_cricket_staging, stg_cricket_curated, stg_cricket_audit_logs
-- [ ] prod_cricket_raw, prod_cricket_staging, prod_cricket_curated, prod_cricket_audit_logs
+- [ ] cricket_raw
+- [ ] cricket_staging
+- [ ] cricket_curated
+- [ ] cricket_audit_logs
 
-### **IAM Roles Check**
-```bash
-gcloud projects get-iam-policy cricbuzz-satish-dev \
-  --flatten="bindings[].members" \
-  --filter="bindings.members:serviceAccount:cricket-dataflow-sa*"
-```
-Should show multiple roles granted
-
-### **Workload Identity Check**
-```bash
-gcloud iam workload-identity-pools describe github-actions-pool \
-  --project=cricbuzz-satish-dev \
-  --location=global
-```
-- [ ] Pool exists and is configured
+**Repeat for -stg and -prod**
 
 ---
 
 ## 🔐 Gather Values for GitHub Secrets
 
-Once all GCP setup is complete, gather these values:
+Once all GCP setup is complete, gather these values for each project:
 
 ### **For DEV Environment:**
 ```bash
+gcloud config set project cricket-analytics-dev
+
 # 1. Project ID
-gcloud config get-value project
-# Copy: DEV_GCP_PROJECT_ID
+DEV_PROJECT_ID=$(gcloud config get-value project)
+echo "DEV_GCP_PROJECT_ID: $DEV_PROJECT_ID"
 
 # 2. Service Account Email
-gcloud iam service-accounts describe cricket-dataflow-sa@cricbuzz-satish-dev.iam.gserviceaccount.com --format='value(email)'
-# Copy: DEV_SERVICE_ACCOUNT_EMAIL
+echo "DEV_SERVICE_ACCOUNT_EMAIL: cricket-dataflow-sa@${DEV_PROJECT_ID}.iam.gserviceaccount.com"
 
-# 3. Workload Identity Provider (same for all envs)
+# 3. Workload Identity Provider
 gcloud iam workload-identity-pools providers describe github-provider \
-  --project=cricbuzz-satish-dev \
+  --project=$DEV_PROJECT_ID \
   --location=global \
   --workload-identity-pool=github-actions-pool \
   --format='value(name)'
-# Copy: DEV_WORKLOAD_IDENTITY_PROVIDER
 
 # 4. Terraform State Bucket
-gsutil ls | grep dev.*tf-state
-# Copy: DEV_TF_STATE_BUCKET (e.g., dev-cricket-tf-state)
+echo "DEV_TF_STATE_BUCKET: cricket-tf-state-dev"
 ```
 
-**Repeat for STG and PROD** with stg-/prod- prefixes
+### **For STG Environment:**
+```bash
+gcloud config set project cricket-analytics-stg
 
-- [ ] DEV_GCP_PROJECT_ID: ___________________________
-- [ ] DEV_SERVICE_ACCOUNT_EMAIL: ___________________________
+# Repeat same commands for STG
+```
+
+### **For PROD Environment:**
+```bash
+gcloud config set project cricket-analytics-prod
+
+# Repeat same commands for PROD
+```
+
+**Record these values:**
+
+- [ ] DEV_GCP_PROJECT_ID: cricket-analytics-dev
+- [ ] DEV_SERVICE_ACCOUNT_EMAIL: cricket-dataflow-sa@cricket-analytics-dev.iam.gserviceaccount.com
 - [ ] DEV_WORKLOAD_IDENTITY_PROVIDER: ___________________________
-- [ ] DEV_TF_STATE_BUCKET: ___________________________
-- [ ] STG_GCP_PROJECT_ID: ___________________________
-- [ ] STG_SERVICE_ACCOUNT_EMAIL: ___________________________
+- [ ] DEV_TF_STATE_BUCKET: cricket-tf-state-dev
+- [ ] STG_GCP_PROJECT_ID: cricket-analytics-stg
+- [ ] STG_SERVICE_ACCOUNT_EMAIL: cricket-dataflow-sa@cricket-analytics-stg.iam.gserviceaccount.com
 - [ ] STG_WORKLOAD_IDENTITY_PROVIDER: ___________________________
-- [ ] STG_TF_STATE_BUCKET: ___________________________
-- [ ] PROD_GCP_PROJECT_ID: ___________________________
-- [ ] PROD_SERVICE_ACCOUNT_EMAIL: ___________________________
+- [ ] STG_TF_STATE_BUCKET: cricket-tf-state-stg
+- [ ] PROD_GCP_PROJECT_ID: cricket-analytics-prod
+- [ ] PROD_SERVICE_ACCOUNT_EMAIL: cricket-dataflow-sa@cricket-analytics-prod.iam.gserviceaccount.com
 - [ ] PROD_WORKLOAD_IDENTITY_PROVIDER: ___________________________
-- [ ] PROD_TF_STATE_BUCKET: ___________________________
+- [ ] PROD_TF_STATE_BUCKET: cricket-tf-state-prod
 
 ---
 
 ## 🎯 Summary
 
-### **One-Time Setup (Phase 1)**
+### **One-Time Setup per Project**
 - [ ] GCP Project created
 - [ ] 12 APIs enabled
 - [ ] Workload Identity Pool created
 - [ ] Workload Identity Provider created
 
-### **Per-Environment Setup (Phases 2-4)**
-- [ ] 4 Service Accounts created per environment
+### **Per-Project Setup**
+- [ ] 4 Service Accounts created
 - [ ] IAM Roles granted to service accounts
 - [ ] GitHub Actions authentication configured
-- [ ] 4 GCS Buckets created per environment
-- [ ] 4 BigQuery Datasets created per environment
+- [ ] 4 GCS Buckets created
+- [ ] 4 BigQuery Datasets created
 
-### **Verification (Phase 5)**
-- [ ] All APIs enabled
-- [ ] All service accounts created
-- [ ] All buckets created
-- [ ] All datasets created
-- [ ] All IAM roles granted
-- [ ] Workload Identity configured
+### **Verification**
+- [ ] All 3 projects exist
+- [ ] All APIs enabled in each project
+- [ ] All service accounts created per project
+- [ ] All buckets created per project
+- [ ] All datasets created per project
+- [ ] All IAM roles granted per project
+- [ ] Workload Identity configured per project
 
-### **GitHub Secrets**
-- [ ] All 12 secrets values gathered
-- [ ] Ready to add to GitHub
+### **GitHub Secrets (12 Total)**
+- [ ] All 12 secrets values gathered (4 per environment × 3 environments)
+- [ ] Ready to add to GitHub (see GITHUB_SECRETS_SETUP.md)
 
 ---
 
 ## 📞 Troubleshooting
 
 **Issue: Permission Denied**
-- Solution: Ensure your user account has Owner or Editor role in GCP
+- Solution: Ensure your user account has Owner or Editor role on the GCP projects/folder/organization
 
-**Issue: Bucket Already Exists**
-- Solution: Either use different bucket name or delete existing bucket first
+**Issue: Project Already Exists**
+- Solution: Use different project names or contact administrator to use existing projects
 
 **Issue: API Not Enabled**
-- Solution: Run `gcloud services enable [API_NAME]`
+- Solution: Run `gcloud services enable [API_NAME]` in the correct project
 
 **Issue: Service Account Creation Fails**
 - Solution: Check if account already exists with `gcloud iam service-accounts list`
+
+**Issue: Bucket Name Conflicts**
+- Solution: Bucket names must be globally unique; prepend your username or organization ID if needed
 
 ---
 
 **Status:** Ready to start GCP setup! 🚀
 
-**Next:** Follow this checklist phase by phase, then add the 12 secrets to GitHub.
+**Next Steps:**
+1. Follow this checklist phase by phase (Phase 1 → Phase 2 → Phase 3 → Phase 4)
+2. Verify all resources in Phase 5
+3. Gather GitHub Secrets values
+4. Add 12 secrets to GitHub (see GITHUB_SECRETS_SETUP.md)

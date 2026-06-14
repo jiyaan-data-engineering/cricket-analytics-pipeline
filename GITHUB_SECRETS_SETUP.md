@@ -1,6 +1,6 @@
 # 🔐 GitHub Secrets Setup Guide
 
-Complete step-by-step guide to add all required secrets for multi-environment deployments.
+Complete step-by-step guide to add all required secrets for multi-environment deployments using three separate GCP projects.
 
 ---
 
@@ -34,45 +34,115 @@ PROD_TF_STATE_BUCKET
 
 ## 🔑 Where to Get These Values
 
-### **1. GCP Project ID**
+### **1. GCP Project ID (per environment)**
+
+For **DEV**:
 ```bash
-# Get from GCP Console
+gcloud config set project cricket-analytics-dev
 gcloud config get-value project
-
-# Output example: cricbuzz-satish-dev
-# Store as: DEV_GCP_PROJECT_ID = cricbuzz-satish-dev
+# Output: cricket-analytics-dev
+# Store as: DEV_GCP_PROJECT_ID = cricket-analytics-dev
 ```
 
-### **2. Service Account Email**
+For **STG**:
 ```bash
-# List all service accounts
-gcloud iam service-accounts list
-
-# Output example:
-# cricket-dataflow-sa@cricbuzz-satish-dev.iam.gserviceaccount.com
-# Store as: DEV_SERVICE_ACCOUNT_EMAIL = cricket-dataflow-sa@cricbuzz-satish-dev.iam.gserviceaccount.com
+gcloud config set project cricket-analytics-stg
+gcloud config get-value project
+# Output: cricket-analytics-stg
+# Store as: STG_GCP_PROJECT_ID = cricket-analytics-stg
 ```
 
-### **3. Workload Identity Provider (WIP)**
+For **PROD**:
 ```bash
-# Get the WIP resource name
-gcloud iam workload-identity-pools describe "github-actions-pool" \
-  --project=cricbuzz-satish-dev \
+gcloud config set project cricket-analytics-prod
+gcloud config get-value project
+# Output: cricket-analytics-prod
+# Store as: PROD_GCP_PROJECT_ID = cricket-analytics-prod
+```
+
+### **2. Service Account Email (per environment)**
+
+For **DEV**:
+```bash
+gcloud config set project cricket-analytics-dev
+echo "cricket-dataflow-sa@cricket-analytics-dev.iam.gserviceaccount.com"
+# Store as: DEV_SERVICE_ACCOUNT_EMAIL = cricket-dataflow-sa@cricket-analytics-dev.iam.gserviceaccount.com
+```
+
+For **STG**:
+```bash
+gcloud config set project cricket-analytics-stg
+echo "cricket-dataflow-sa@cricket-analytics-stg.iam.gserviceaccount.com"
+# Store as: STG_SERVICE_ACCOUNT_EMAIL = cricket-dataflow-sa@cricket-analytics-stg.iam.gserviceaccount.com
+```
+
+For **PROD**:
+```bash
+gcloud config set project cricket-analytics-prod
+echo "cricket-dataflow-sa@cricket-analytics-prod.iam.gserviceaccount.com"
+# Store as: PROD_SERVICE_ACCOUNT_EMAIL = cricket-dataflow-sa@cricket-analytics-prod.iam.gserviceaccount.com
+```
+
+### **3. Workload Identity Provider (per environment)**
+
+For **DEV**:
+```bash
+gcloud config set project cricket-analytics-dev
+gcloud iam workload-identity-pools providers describe "github-provider" \
+  --project=cricket-analytics-dev \
   --location=global \
+  --workload-identity-pool=github-actions-pool \
   --format='value(name)'
-
-# Output example:
-# projects/185087551442/locations/global/workloadIdentityPools/github-actions-pool/providers/github-provider
-# Store as: DEV_WORKLOAD_IDENTITY_PROVIDER = projects/185087551442/locations/global/workloadIdentityPools/github-actions-pool/providers/github-provider
+# Output: projects/YOUR_DEV_PROJECT_NUMBER/locations/global/workloadIdentityPools/github-actions-pool/providers/github-provider
+# Store as: DEV_WORKLOAD_IDENTITY_PROVIDER = <full resource name>
 ```
 
-### **4. Terraform State Bucket**
+For **STG**:
 ```bash
-# List GCS buckets
-gsutil ls
+gcloud config set project cricket-analytics-stg
+gcloud iam workload-identity-pools providers describe "github-provider" \
+  --project=cricket-analytics-stg \
+  --location=global \
+  --workload-identity-pool=github-actions-pool \
+  --format='value(name)'
+# Store as: STG_WORKLOAD_IDENTITY_PROVIDER = <full resource name>
+```
 
-# Look for bucket like: gs://dev-cricket-tf-state
-# Store as: DEV_TF_STATE_BUCKET = dev-cricket-tf-state
+For **PROD**:
+```bash
+gcloud config set project cricket-analytics-prod
+gcloud iam workload-identity-pools providers describe "github-provider" \
+  --project=cricket-analytics-prod \
+  --location=global \
+  --workload-identity-pool=github-actions-pool \
+  --format='value(name)'
+# Store as: PROD_WORKLOAD_IDENTITY_PROVIDER = <full resource name>
+```
+
+### **4. Terraform State Bucket (per environment)**
+
+For **DEV**:
+```bash
+gcloud config set project cricket-analytics-dev
+gsutil ls
+# Look for: gs://cricket-tf-state-dev
+# Store as: DEV_TF_STATE_BUCKET = cricket-tf-state-dev
+```
+
+For **STG**:
+```bash
+gcloud config set project cricket-analytics-stg
+gsutil ls
+# Look for: gs://cricket-tf-state-stg
+# Store as: STG_TF_STATE_BUCKET = cricket-tf-state-stg
+```
+
+For **PROD**:
+```bash
+gcloud config set project cricket-analytics-prod
+gsutil ls
+# Look for: gs://cricket-tf-state-prod
+# Store as: PROD_TF_STATE_BUCKET = cricket-tf-state-prod
 ```
 
 ---
@@ -106,22 +176,22 @@ gh auth login
 cd cricket-analytics-pipeline
 
 # Add DEV secrets
-gh secret set DEV_GCP_PROJECT_ID --body "cricbuzz-satish-dev"
-gh secret set DEV_SERVICE_ACCOUNT_EMAIL --body "cricket-dataflow-sa@cricbuzz-satish-dev.iam.gserviceaccount.com"
-gh secret set DEV_WORKLOAD_IDENTITY_PROVIDER --body "projects/185087551442/locations/global/workloadIdentityPools/github-actions-pool/providers/github-provider"
-gh secret set DEV_TF_STATE_BUCKET --body "dev-cricket-tf-state"
+gh secret set DEV_GCP_PROJECT_ID --body "cricket-analytics-dev"
+gh secret set DEV_SERVICE_ACCOUNT_EMAIL --body "cricket-dataflow-sa@cricket-analytics-dev.iam.gserviceaccount.com"
+gh secret set DEV_WORKLOAD_IDENTITY_PROVIDER --body "projects/YOUR_DEV_PROJECT_NUMBER/locations/global/workloadIdentityPools/github-actions-pool/providers/github-provider"
+gh secret set DEV_TF_STATE_BUCKET --body "cricket-tf-state-dev"
 
 # Add STG secrets
-gh secret set STG_GCP_PROJECT_ID --body "cricbuzz-satish-dev"
-gh secret set STG_SERVICE_ACCOUNT_EMAIL --body "cricket-dataflow-sa@cricbuzz-satish-dev.iam.gserviceaccount.com"
-gh secret set STG_WORKLOAD_IDENTITY_PROVIDER --body "projects/185087551442/locations/global/workloadIdentityPools/github-actions-pool/providers/github-provider"
-gh secret set STG_TF_STATE_BUCKET --body "stg-cricket-tf-state"
+gh secret set STG_GCP_PROJECT_ID --body "cricket-analytics-stg"
+gh secret set STG_SERVICE_ACCOUNT_EMAIL --body "cricket-dataflow-sa@cricket-analytics-stg.iam.gserviceaccount.com"
+gh secret set STG_WORKLOAD_IDENTITY_PROVIDER --body "projects/YOUR_STG_PROJECT_NUMBER/locations/global/workloadIdentityPools/github-actions-pool/providers/github-provider"
+gh secret set STG_TF_STATE_BUCKET --body "cricket-tf-state-stg"
 
 # Add PROD secrets
-gh secret set PROD_GCP_PROJECT_ID --body "cricbuzz-satish-dev"
-gh secret set PROD_SERVICE_ACCOUNT_EMAIL --body "cricket-dataflow-sa@cricbuzz-satish-dev.iam.gserviceaccount.com"
-gh secret set PROD_WORKLOAD_IDENTITY_PROVIDER --body "projects/185087551442/locations/global/workloadIdentityPools/github-actions-pool/providers/github-provider"
-gh secret set PROD_TF_STATE_BUCKET --body "prod-cricket-tf-state"
+gh secret set PROD_GCP_PROJECT_ID --body "cricket-analytics-prod"
+gh secret set PROD_SERVICE_ACCOUNT_EMAIL --body "cricket-dataflow-sa@cricket-analytics-prod.iam.gserviceaccount.com"
+gh secret set PROD_WORKLOAD_IDENTITY_PROVIDER --body "projects/YOUR_PROD_PROJECT_NUMBER/locations/global/workloadIdentityPools/github-actions-pool/providers/github-provider"
+gh secret set PROD_TF_STATE_BUCKET --body "cricket-tf-state-prod"
 
 # Verify all secrets are added
 gh secret list
@@ -134,55 +204,55 @@ gh secret list
 ### **Development Secrets (DEV_*)**
 
 - [ ] **DEV_GCP_PROJECT_ID**
-  - Value: `cricbuzz-satish-dev`
-  - Description: Your GCP project ID
+  - Value: `cricket-analytics-dev`
+  - Description: Development GCP project ID
 
 - [ ] **DEV_SERVICE_ACCOUNT_EMAIL**
-  - Value: `cricket-dataflow-sa@cricbuzz-satish-dev.iam.gserviceaccount.com`
+  - Value: `cricket-dataflow-sa@cricket-analytics-dev.iam.gserviceaccount.com`
   - Description: Service account email for dev deployments
 
 - [ ] **DEV_WORKLOAD_IDENTITY_PROVIDER**
-  - Value: `projects/185087551442/locations/global/workloadIdentityPools/github-actions-pool/providers/github-provider`
-  - Description: Workload Identity Provider for OIDC authentication
+  - Value: `projects/YOUR_DEV_PROJECT_NUMBER/locations/global/workloadIdentityPools/github-actions-pool/providers/github-provider`
+  - Description: Workload Identity Provider for OIDC authentication (DEV)
 
 - [ ] **DEV_TF_STATE_BUCKET**
-  - Value: `dev-cricket-tf-state`
+  - Value: `cricket-tf-state-dev`
   - Description: GCS bucket for Terraform state (dev)
 
 ### **Staging Secrets (STG_*)**
 
 - [ ] **STG_GCP_PROJECT_ID**
-  - Value: `cricbuzz-satish-dev`
-  - Description: Your GCP project ID
+  - Value: `cricket-analytics-stg`
+  - Description: Staging GCP project ID
 
 - [ ] **STG_SERVICE_ACCOUNT_EMAIL**
-  - Value: `cricket-dataflow-sa@cricbuzz-satish-dev.iam.gserviceaccount.com`
+  - Value: `cricket-dataflow-sa@cricket-analytics-stg.iam.gserviceaccount.com`
   - Description: Service account email for staging deployments
 
 - [ ] **STG_WORKLOAD_IDENTITY_PROVIDER**
-  - Value: `projects/185087551442/locations/global/workloadIdentityPools/github-actions-pool/providers/github-provider`
-  - Description: Workload Identity Provider for OIDC authentication
+  - Value: `projects/YOUR_STG_PROJECT_NUMBER/locations/global/workloadIdentityPools/github-actions-pool/providers/github-provider`
+  - Description: Workload Identity Provider for OIDC authentication (STG)
 
 - [ ] **STG_TF_STATE_BUCKET**
-  - Value: `stg-cricket-tf-state`
+  - Value: `cricket-tf-state-stg`
   - Description: GCS bucket for Terraform state (staging)
 
 ### **Production Secrets (PROD_*)**
 
 - [ ] **PROD_GCP_PROJECT_ID**
-  - Value: `cricbuzz-satish-dev`
-  - Description: Your GCP project ID
+  - Value: `cricket-analytics-prod`
+  - Description: Production GCP project ID
 
 - [ ] **PROD_SERVICE_ACCOUNT_EMAIL**
-  - Value: `cricket-dataflow-sa@cricbuzz-satish-dev.iam.gserviceaccount.com`
+  - Value: `cricket-dataflow-sa@cricket-analytics-prod.iam.gserviceaccount.com`
   - Description: Service account email for production deployments
 
 - [ ] **PROD_WORKLOAD_IDENTITY_PROVIDER**
-  - Value: `projects/185087551442/locations/global/workloadIdentityPools/github-actions-pool/providers/github-provider`
-  - Description: Workload Identity Provider for OIDC authentication
+  - Value: `projects/YOUR_PROD_PROJECT_NUMBER/locations/global/workloadIdentityPools/github-actions-pool/providers/github-provider`
+  - Description: Workload Identity Provider for OIDC authentication (PROD)
 
 - [ ] **PROD_TF_STATE_BUCKET**
-  - Value: `prod-cricket-tf-state`
+  - Value: `cricket-tf-state-prod`
   - Description: GCS bucket for Terraform state (production)
 
 ---

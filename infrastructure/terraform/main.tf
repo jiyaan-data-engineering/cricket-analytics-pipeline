@@ -321,6 +321,82 @@ resource "null_resource" "looker_studio_script" {
 #   python3 ./scripts/create-looker-dashboard-api.py cricket-analytics-prod cricket_curated
 
 # ============================================================================
+# CLOUD FUNCTION - EVENT-DRIVEN DATAFLOW TRIGGER
+# ============================================================================
+
+data "archive_file" "cloud_function_source" {
+  type        = "zip"
+  source_dir  = "${path.module}/../../pipeline/cloud_function"
+  output_path = "${path.module}/cloud_function_source.zip"
+}
+
+resource "google_storage_bucket_object" "cloud_function_zip" {
+  name   = "cloud-function-source.zip"
+  bucket = google_storage_bucket.templates.name
+  source = data.archive_file.cloud_function_source.output_path
+
+  depends_on = [
+    data.archive_file.cloud_function_source,
+    google_storage_bucket.templates
+  ]
+}
+
+resource "google_cloudfunctions_function" "dataflow_trigger" {
+  name        = "cricket-dataflow-trigger"
+  description = "Triggers Dataflow job when CSV is uploaded to raw data bucket"
+  runtime     = "python311"
+  region      = var.gcp_region
+  project     = var.gcp_project_id
+
+  available_memory_mb   = 256
+  source_archive_bucket = google_storage_bucket.templates.name
+  source_archive_object = google_storage_bucket_object.cloud_function_zip.name
+
+  event_trigger {
+    event_type = "google.storage.object.finalize"
+    resource   = google_storage_bucket.raw_data.name
+  }
+
+  entry_point = "process_batting_file"
+
+  environment_variables = {
+    GCP_PROJECT_ID           = var.gcp_project_id
+    GCP_REGION               = var.gcp_region
+    DATAFLOW_TEMPLATE_BUCKET = google_storage_bucket.templates.name
+    BQ_DATASET               = google_bigquery_dataset.raw.dataset_id
+  }
+
+  service_account_email = google_service_account.cloud_function.email
+
+  depends_on = [
+    google_project_service.required_apis["cloudfunctions.googleapis.com"],
+    google_project_service.required_apis["eventarc.googleapis.com"],
+    google_storage_bucket_object.cloud_function_zip,
+    google_project_iam_member.cloud_function_dataflow_admin,
+    google_project_iam_member.cloud_function_service_account_user,
+    google_project_iam_member.cloud_function_storage_viewer
+  ]
+}
+
+resource "google_project_iam_member" "cloud_function_dataflow_admin" {
+  project = var.gcp_project_id
+  role    = "roles/dataflow.admin"
+  member  = "serviceAccount:${google_service_account.cloud_function.email}"
+}
+
+resource "google_project_iam_member" "cloud_function_service_account_user" {
+  project = var.gcp_project_id
+  role    = "roles/iam.serviceAccountUser"
+  member  = "serviceAccount:${google_service_account.cloud_function.email}"
+}
+
+resource "google_project_iam_member" "cloud_function_storage_viewer" {
+  project = var.gcp_project_id
+  role    = "roles/storage.objectViewer"
+  member  = "serviceAccount:${google_service_account.cloud_function.email}"
+}
+
+# ============================================================================
 # EVENT-DRIVEN & ORCHESTRATION RESOURCES (DEPLOYED MANUALLY)
 # ============================================================================
 # Note: Cloud Function, Eventarc, Cloud Run, Cloud Scheduler, and Cloud Composer

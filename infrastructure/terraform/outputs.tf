@@ -87,6 +87,25 @@ output "cloud_composer_service_account" {
 }
 
 # ============================================================================
+# CLOUD FUNCTION - EVENT-DRIVEN DATAFLOW TRIGGER
+# ============================================================================
+
+output "cloud_function_name" {
+  value       = google_cloudfunctions_function.dataflow_trigger.name
+  description = "Cloud Function name for Dataflow trigger"
+}
+
+output "cloud_function_trigger_bucket" {
+  value       = google_storage_bucket.raw_data.name
+  description = "GCS bucket that triggers Cloud Function on file upload"
+}
+
+output "cloud_function_status" {
+  value       = "✅ Event-driven pipeline enabled: CSV upload → Cloud Function → Dataflow → BigQuery RAW"
+  description = "Cloud Function event-driven architecture status"
+}
+
+# ============================================================================
 # LOOKER STUDIO DASHBOARD
 # ============================================================================
 

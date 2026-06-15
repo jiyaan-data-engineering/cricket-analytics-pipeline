@@ -313,6 +313,26 @@ resource "null_resource" "looker_studio_script" {
   ]
 }
 
+resource "local_file" "looker_dashboard_api" {
+  filename = "${path.module}/../../scripts/create-looker-dashboard-api.py"
+  content  = file("${path.module}/../../scripts/create-looker-dashboard-api.py")
+
+  depends_on = [
+    google_bigquery_dataset.curated
+  ]
+}
+
+resource "null_resource" "looker_dashboard_generator" {
+  provisioner "local-exec" {
+    command = "chmod +x ${local_file.looker_dashboard_api.filename} && python3 ${local_file.looker_dashboard_api.filename} ${var.gcp_project_id} cricket_curated"
+  }
+
+  depends_on = [
+    local_file.looker_dashboard_api,
+    google_bigquery_dataset.curated
+  ]
+}
+
 # ============================================================================
 # EVENT-DRIVEN & ORCHESTRATION RESOURCES (DEPLOYED MANUALLY)
 # ============================================================================

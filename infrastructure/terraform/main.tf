@@ -313,15 +313,12 @@ resource "null_resource" "looker_studio_script" {
   ]
 }
 
-resource "null_resource" "looker_dashboard_generator" {
-  provisioner "local-exec" {
-    command = "python3 ${path.module}/../../scripts/create-looker-dashboard-api.py ${var.gcp_project_id} cricket_curated > /tmp/looker-dashboard-config.json"
-  }
-
-  depends_on = [
-    google_bigquery_dataset.curated
-  ]
-}
+# Looker Studio dashboard automation is provided via scripts:
+# - scripts/create-looker-dashboard.sh (interactive setup guide)
+# - scripts/create-looker-dashboard-api.py (dashboard configuration reference)
+# These can be run manually after Terraform deployment:
+#   ./scripts/create-looker-dashboard.sh cricket-analytics-prod us-central1
+#   python3 ./scripts/create-looker-dashboard-api.py cricket-analytics-prod cricket_curated
 
 # ============================================================================
 # EVENT-DRIVEN & ORCHESTRATION RESOURCES (DEPLOYED MANUALLY)

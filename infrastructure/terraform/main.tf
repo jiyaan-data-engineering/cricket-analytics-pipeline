@@ -360,11 +360,10 @@ resource "google_cloudfunctions2_function" "dataflow_trigger" {
   }
 
   event_trigger {
-    event_type   = "google.cloud.storage.object.finalize"
-    trigger_region = var.gcp_region
+    event_type            = "google.cloud.storage.object.finalize"
+    trigger_region        = var.gcp_region
     service_account_email = google_service_account.cloud_function.email
-
-    retry_policy = "RETRY_POLICY_UNSPECIFIED"
+    retry_policy          = "RETRY_POLICY_UNSPECIFIED"
 
     event_filters {
       attribute = "bucket"
@@ -391,7 +390,7 @@ data "archive_file" "cloud_function_code" {
 }
 
 resource "google_storage_bucket_object" "cloud_function_code" {
-  name   = "cloud-function-source.zip"
+  name = "cloud-function-source.zip"
   bucket = google_storage_bucket.templates.name
   source = data.archive_file.cloud_function_code.output_path
 

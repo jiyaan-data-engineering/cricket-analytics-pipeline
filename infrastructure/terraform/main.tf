@@ -324,43 +324,15 @@ resource "null_resource" "looker_studio_script" {
 # CLOUD FUNCTION - EVENT-DRIVEN DATAFLOW TRIGGER
 # ============================================================================
 
-# Cloud Function deployment instructions (manual setup recommended)
-# Terraform google_cloudfunctions2_function resource requires complex nested configuration
-# that is difficult to format correctly. Use gcloud command instead:
-#
+# Cloud Function deployment via gcloud (manual)
+# Terraform google_cloudfunctions2_function resource requires complex nested configuration.
+# Deploy manually after Terraform:
 #   gcloud functions deploy cricket-dataflow-trigger \
-#     --gen2 \
-#     --runtime python311 \
-#     --region us-central1 \
+#     --gen2 --runtime python311 --region us-central1 \
 #     --trigger-bucket cricket-raw-data-prod \
 #     --entry-point process_batting_file \
 #     --source ./pipeline/cloud_function \
 #     --service-account cricket-cloud-function-sa@${GCP_PROJECT_ID}.iam.gserviceaccount.com
-
-# Grant IAM roles to Cloud Function service account
-resource "google_project_iam_member" "cloud_function_dataflow_admin" {
-  project = var.gcp_project_id
-  role    = "roles/dataflow.admin"
-  member  = "serviceAccount:${google_service_account.cloud_function.email}"
-}
-
-resource "google_project_iam_member" "cloud_function_service_account_user" {
-  project = var.gcp_project_id
-  role    = "roles/iam.serviceAccountUser"
-  member  = "serviceAccount:${google_service_account.cloud_function.email}"
-}
-
-resource "google_project_iam_member" "cloud_function_storage_viewer" {
-  project = var.gcp_project_id
-  role    = "roles/storage.objectViewer"
-  member  = "serviceAccount:${google_service_account.cloud_function.email}"
-}
-
-resource "google_project_iam_member" "cloud_function_run_invoker" {
-  project = var.gcp_project_id
-  role    = "roles/run.invoker"
-  member  = "serviceAccount:${google_service_account.cloud_function.email}"
-}
 
 # ============================================================================
 # EVENT-DRIVEN & ORCHESTRATION RESOURCES (DEPLOYED MANUALLY)

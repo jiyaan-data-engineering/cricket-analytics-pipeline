@@ -95,21 +95,36 @@ output "cloud_function_trigger_bucket" {
   description = "GCS bucket for triggering Cloud Function on CSV upload"
 }
 
-output "cloud_function_deployment_command" {
-  value = <<EOT
-Deploy Cloud Function using gcloud:
+output "cloud_function_deployment_instructions" {
+  value       = <<EOT
+To deploy Cloud Function (event-driven trigger):
 
-gcloud functions deploy cricket-dataflow-trigger \
-  --gen2 \
-  --runtime python311 \
-  --region us-central1 \
-  --trigger-bucket ${google_storage_bucket.raw_data.name} \
-  --entry-point process_batting_file \
-  --source ./pipeline/cloud_function \
-  --service-account cricket-cloud-function-sa@${var.gcp_project_id}.iam.gserviceaccount.com \
-  --project ${var.gcp_project_id}
+1. Deploy the function:
+   gcloud functions deploy cricket-dataflow-trigger \
+     --runtime python311 \
+     --region us-central1 \
+     --trigger-bucket ${google_storage_bucket.raw_data.name} \
+     --entry-point process_batting_file \
+     --source ./pipeline/cloud_function \
+     --service-account cricket-cloud-function-sa@${var.gcp_project_id}.iam.gserviceaccount.com \
+     --project ${var.gcp_project_id}
+
+2. Grant IAM roles to service account:
+   gcloud projects add-iam-policy-binding ${var.gcp_project_id} \
+     --member=serviceAccount:cricket-cloud-function-sa@${var.gcp_project_id}.iam.gserviceaccount.com \
+     --role=roles/dataflow.admin
+
+   gcloud projects add-iam-policy-binding ${var.gcp_project_id} \
+     --member=serviceAccount:cricket-cloud-function-sa@${var.gcp_project_id}.iam.gserviceaccount.com \
+     --role=roles/iam.serviceAccountUser
+
+   gcloud projects add-iam-policy-binding ${var.gcp_project_id} \
+     --member=serviceAccount:cricket-cloud-function-sa@${var.gcp_project_id}.iam.gserviceaccount.com \
+     --role=roles/storage.objectViewer
+
+After deployment, CSV uploads to ${google_storage_bucket.raw_data.name} will trigger Dataflow automatically.
 EOT
-  description = "Cloud Function gcloud deployment command"
+  description = "Cloud Function deployment instructions"
 }
 
 # ============================================================================

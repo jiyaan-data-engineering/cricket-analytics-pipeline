@@ -96,21 +96,21 @@ output "looker_studio_setup_script" {
 }
 
 output "looker_studio_instructions" {
-  value       = <<-EOT
-    To create Looker Studio dashboard:
+  value = <<EOT
+To create Looker Studio dashboard:
 
-    1. Run the setup script:
-       ${local_file.looker_studio_setup.filename}
+1. Run the setup script:
+   ${local_file.looker_studio_setup.filename}
 
-    2. Or manually:
-       - Go to: https://lookerstudio.google.com
-       - Create new report
-       - Connect to BigQuery: cricket-analytics-prod / cricket_curated
-       - Add visualizations using 5 curated views
+2. Or manually:
+   - Go to: https://lookerstudio.google.com
+   - Create new report
+   - Connect to BigQuery: cricket-analytics-prod / cricket_curated
+   - Add visualizations using 5 curated views
 
-    3. Configure auto-refresh to 09:00 UTC daily
+3. Configure auto-refresh to 09:00 UTC daily
 
-    For more details, see: DEPLOYMENT.md (Step 5)
-  EOT
+For more details, see: DEPLOYMENT.md (Step 5)
+EOT
   description = "Instructions for creating Looker Studio dashboard"
 }

@@ -96,35 +96,34 @@ output "cloud_function_trigger_bucket" {
 }
 
 output "cloud_function_deployment_instructions" {
-  value = <<-EOT
-    To deploy Cloud Function (event-driven trigger):
+  value       = <<EOT
+To deploy Cloud Function (event-driven trigger):
 
-    1. Deploy the function:
-       gcloud functions deploy cricket-dataflow-trigger \
-         --runtime python311 \
-         --trigger-resource ${google_storage_bucket.raw_data.name} \
-         --trigger-event google.cloud.storage.object.finalize \
-         --entry-point process_batting_file \
-         --source ./pipeline/cloud_function \
-         --service-account cricket-cloud-function-sa@${var.gcp_project_id}.iam.gserviceaccount.com \
-         --project ${var.gcp_project_id} \
-         --region ${var.gcp_region}
+1. Deploy the function:
+   gcloud functions deploy cricket-dataflow-trigger \
+     --runtime python311 \
+     --region us-central1 \
+     --trigger-bucket ${google_storage_bucket.raw_data.name} \
+     --entry-point process_batting_file \
+     --source ./pipeline/cloud_function \
+     --service-account cricket-cloud-function-sa@${var.gcp_project_id}.iam.gserviceaccount.com \
+     --project ${var.gcp_project_id}
 
-    2. Grant IAM roles to service account:
-       gcloud projects add-iam-policy-binding ${var.gcp_project_id} \
-         --member=serviceAccount:cricket-cloud-function-sa@${var.gcp_project_id}.iam.gserviceaccount.com \
-         --role=roles/dataflow.admin
+2. Grant IAM roles to service account:
+   gcloud projects add-iam-policy-binding ${var.gcp_project_id} \
+     --member=serviceAccount:cricket-cloud-function-sa@${var.gcp_project_id}.iam.gserviceaccount.com \
+     --role=roles/dataflow.admin
 
-       gcloud projects add-iam-policy-binding ${var.gcp_project_id} \
-         --member=serviceAccount:cricket-cloud-function-sa@${var.gcp_project_id}.iam.gserviceaccount.com \
-         --role=roles/iam.serviceAccountUser
+   gcloud projects add-iam-policy-binding ${var.gcp_project_id} \
+     --member=serviceAccount:cricket-cloud-function-sa@${var.gcp_project_id}.iam.gserviceaccount.com \
+     --role=roles/iam.serviceAccountUser
 
-       gcloud projects add-iam-policy-binding ${var.gcp_project_id} \
-         --member=serviceAccount:cricket-cloud-function-sa@${var.gcp_project_id}.iam.gserviceaccount.com \
-         --role=roles/storage.objectViewer
+   gcloud projects add-iam-policy-binding ${var.gcp_project_id} \
+     --member=serviceAccount:cricket-cloud-function-sa@${var.gcp_project_id}.iam.gserviceaccount.com \
+     --role=roles/storage.objectViewer
 
-    After deployment, CSV uploads to ${google_storage_bucket.raw_data.name} will trigger Dataflow automatically.
-  EOT
+After deployment, CSV uploads to ${google_storage_bucket.raw_data.name} will trigger Dataflow automatically.
+EOT
   description = "Cloud Function deployment instructions"
 }
 

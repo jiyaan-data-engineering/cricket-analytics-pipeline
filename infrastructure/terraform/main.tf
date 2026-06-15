@@ -343,11 +343,10 @@ resource "google_cloudfunctions2_function" "dataflow_trigger" {
   }
 
   service_config {
-    max_instance_count  = 10
-    min_instance_count  = 1
-    available_memory_mb = 256
-    timeout_seconds     = 600
-
+    max_instance_count    = 10
+    min_instance_count    = 1
+    available_memory_mb   = 256
+    timeout_seconds       = 600
     service_account_email = google_service_account.cloud_function.email
 
     environment_variables = {

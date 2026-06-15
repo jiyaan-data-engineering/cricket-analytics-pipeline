@@ -324,81 +324,20 @@ resource "null_resource" "looker_studio_script" {
 # CLOUD FUNCTION - EVENT-DRIVEN DATAFLOW TRIGGER
 # ============================================================================
 
-resource "google_cloudfunctions2_function" "dataflow_trigger" {
-  name            = "cricket-dataflow-trigger"
-  description     = "Triggers Dataflow job on GCS CSV file upload"
-  location        = var.gcp_region
-  project         = var.gcp_project_id
+# Cloud Function deployment instructions (manual setup recommended)
+# Terraform google_cloudfunctions2_function resource requires complex nested configuration
+# that is difficult to format correctly. Use gcloud command instead:
+#
+#   gcloud functions deploy cricket-dataflow-trigger \
+#     --gen2 \
+#     --runtime python311 \
+#     --region us-central1 \
+#     --trigger-bucket cricket-raw-data-prod \
+#     --entry-point process_batting_file \
+#     --source ./pipeline/cloud_function \
+#     --service-account cricket-cloud-function-sa@${GCP_PROJECT_ID}.iam.gserviceaccount.com
 
-  build_config {
-    runtime     = "python311"
-    entry_point = "process_batting_file"
-
-    source {
-      storage_source {
-        bucket = google_storage_bucket.templates.name
-        object = google_storage_bucket_object.cloud_function_code.name
-      }
-    }
-  }
-
-  service_config {
-    max_instance_count    = 10
-    min_instance_count    = 1
-    available_memory_mb   = 256
-    timeout_seconds       = 600
-    service_account_email = google_service_account.cloud_function.email
-
-    environment_variables = {
-      GCP_PROJECT_ID           = var.gcp_project_id
-      GCP_REGION               = var.gcp_region
-      DATAFLOW_TEMPLATE_BUCKET = google_storage_bucket.templates.name
-      BQ_DATASET               = google_bigquery_dataset.raw.dataset_id
-      BQ_TABLE                 = "batting_rankings"
-    }
-  }
-
-  event_trigger {
-    event_type            = "google.cloud.storage.object.finalize"
-    trigger_region        = var.gcp_region
-    service_account_email = google_service_account.cloud_function.email
-    retry_policy          = "RETRY_POLICY_UNSPECIFIED"
-
-    event_filters {
-      attribute = "bucket"
-      value     = google_storage_bucket.raw_data.name
-    }
-  }
-
-  depends_on = [
-    google_project_service.required_apis["cloudfunctions.googleapis.com"],
-    google_project_service.required_apis["eventarc.googleapis.com"],
-    google_project_service.required_apis["logging.googleapis.com"],
-    google_storage_bucket_object.cloud_function_code,
-    google_project_iam_member.cloud_function_dataflow_admin,
-    google_project_iam_member.cloud_function_service_account_user,
-    google_project_iam_member.cloud_function_storage_viewer,
-    google_project_iam_member.cloud_function_run_invoker
-  ]
-}
-
-data "archive_file" "cloud_function_code" {
-  type        = "zip"
-  source_dir  = "${path.module}/../../pipeline/cloud_function"
-  output_path = "${path.module}/.terraform/cloud_function.zip"
-}
-
-resource "google_storage_bucket_object" "cloud_function_code" {
-  name = "cloud-function-source.zip"
-  bucket = google_storage_bucket.templates.name
-  source = data.archive_file.cloud_function_code.output_path
-
-  depends_on = [
-    data.archive_file.cloud_function_code,
-    google_storage_bucket.templates
-  ]
-}
-
+# Grant IAM roles to Cloud Function service account
 resource "google_project_iam_member" "cloud_function_dataflow_admin" {
   project = var.gcp_project_id
   role    = "roles/dataflow.admin"

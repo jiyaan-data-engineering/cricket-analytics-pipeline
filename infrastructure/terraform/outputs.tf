@@ -90,19 +90,26 @@ output "cloud_composer_service_account" {
 # CLOUD FUNCTION - EVENT-DRIVEN DATAFLOW TRIGGER
 # ============================================================================
 
-output "cloud_function_name" {
-  value       = google_cloudfunctions2_function.dataflow_trigger.name
-  description = "Cloud Function name for Dataflow trigger"
-}
-
 output "cloud_function_trigger_bucket" {
   value       = google_storage_bucket.raw_data.name
-  description = "GCS bucket that triggers Cloud Function on CSV upload"
+  description = "GCS bucket for triggering Cloud Function on CSV upload"
 }
 
-output "cloud_function_status" {
-  value       = "✅ Event-driven pipeline ACTIVE: CSV upload → GCS event → Cloud Function → Dataflow → BigQuery RAW"
-  description = "Cloud Function deployment status"
+output "cloud_function_deployment_command" {
+  value = <<EOT
+Deploy Cloud Function using gcloud:
+
+gcloud functions deploy cricket-dataflow-trigger \
+  --gen2 \
+  --runtime python311 \
+  --region us-central1 \
+  --trigger-bucket ${google_storage_bucket.raw_data.name} \
+  --entry-point process_batting_file \
+  --source ./pipeline/cloud_function \
+  --service-account cricket-cloud-function-sa@${var.gcp_project_id}.iam.gserviceaccount.com \
+  --project ${var.gcp_project_id}
+EOT
+  description = "Cloud Function gcloud deployment command"
 }
 
 # ============================================================================

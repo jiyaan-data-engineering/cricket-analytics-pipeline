@@ -324,15 +324,28 @@ resource "null_resource" "looker_studio_script" {
 # CLOUD FUNCTION - EVENT-DRIVEN DATAFLOW TRIGGER
 # ============================================================================
 
-# Cloud Function deployment via gcloud (manual)
-# Terraform google_cloudfunctions2_function resource requires complex nested configuration.
-# Deploy manually after Terraform:
+# Cloud Function deployment via gcloud command (Terraform has limitations with function code packaging)
+# Execute after Terraform deployment:
 #   gcloud functions deploy cricket-dataflow-trigger \
-#     --gen2 --runtime python311 --region us-central1 \
-#     --trigger-bucket cricket-raw-data-prod \
+#     --runtime python311 \
+#     --trigger-resource cricket-raw-data-prod \
+#     --trigger-event google.cloud.storage.object.finalize \
 #     --entry-point process_batting_file \
 #     --source ./pipeline/cloud_function \
-#     --service-account cricket-cloud-function-sa@${GCP_PROJECT_ID}.iam.gserviceaccount.com
+#     --service-account cricket-cloud-function-sa@${GCP_PROJECT_ID}.iam.gserviceaccount.com \
+#     --project cricket-analytics-prod \
+#     --region us-central1
+#
+# Manual IAM role assignment (required for event-driven pipeline):
+#   gcloud projects add-iam-policy-binding ${GCP_PROJECT_ID} \
+#     --member=serviceAccount:cricket-cloud-function-sa@${GCP_PROJECT_ID}.iam.gserviceaccount.com \
+#     --role=roles/dataflow.admin
+#   gcloud projects add-iam-policy-binding ${GCP_PROJECT_ID} \
+#     --member=serviceAccount:cricket-cloud-function-sa@${GCP_PROJECT_ID}.iam.gserviceaccount.com \
+#     --role=roles/iam.serviceAccountUser
+#   gcloud projects add-iam-policy-binding ${GCP_PROJECT_ID} \
+#     --member=serviceAccount:cricket-cloud-function-sa@${GCP_PROJECT_ID}.iam.gserviceaccount.com \
+#     --role=roles/storage.objectViewer
 
 # ============================================================================
 # EVENT-DRIVEN & ORCHESTRATION RESOURCES (DEPLOYED MANUALLY)

@@ -323,7 +323,7 @@ jobs:
 
       - name: 🔧 Deploy Cloud Function
         run: |
-          echo "🔧 Deploying Cloud Function..."
+          echo "🔧 Deploying Cloud Function (2nd gen)..."
 
           gcloud functions deploy cricket-dataflow-trigger \
             --gen2 \
@@ -331,9 +331,7 @@ jobs:
             --region us-central1 \
             --source pipeline/cloud_function \
             --entry-point process_batting_file \
-            --trigger-event-type google.cloud.storage.object.v1.finalized \
-            --trigger-resource cricket-raw-data-prod \
-            --trigger-location us-central1 \
+            --trigger-bucket cricket-raw-data-prod \
             --service-account cricket-cloud-function-sa@${{ secrets.PROD_GCP_PROJECT_ID }}.iam.gserviceaccount.com \
             --memory 256MB \
             --timeout 60s \

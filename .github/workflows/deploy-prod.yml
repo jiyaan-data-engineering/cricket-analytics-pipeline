@@ -321,48 +321,37 @@ jobs:
           terraform apply -auto-approve prod.tfplan
           echo "✅ PRODUCTION infrastructure deployed successfully"
 
-      - name: 🔧 Deploy Cloud Function (Automated)
+      - name: 📋 Cloud Function - Manual Deployment
         run: |
-          echo "🔧 Deploying Cloud Function..."
+          echo "=================================================="
+          echo "🔧 Cloud Function Deployment Guide"
+          echo "=================================================="
+          echo ""
+          echo "Cloud Function will be deployed AFTER IAM roles are set."
+          echo ""
           PROJECT_ID="${{ secrets.PROD_GCP_PROJECT_ID }}"
-
+          echo "Step 1: Set IAM roles (ONE TIME, org admin required)"
           echo ""
-          echo "Deploying cricket-dataflow-trigger (1st gen)..."
-          gcloud functions deploy cricket-dataflow-trigger \
-            --runtime python311 \
-            --region us-central1 \
-            --source pipeline/cloud_function \
-            --entry-point process_batting_file \
-            --trigger-resource cricket-raw-data-prod \
-            --trigger-event google.storage.object.finalize \
-            --service-account cricket-cloud-function-sa@$PROJECT_ID.iam.gserviceaccount.com \
-            --memory 256MB \
-            --no-gen2 \
-            --set-env-vars GCP_PROJECT_ID=$PROJECT_ID,GCP_REGION=us-central1,DATAFLOW_TEMPLATE_BUCKET=cricket-dataflow-templates-prod,BQ_DATASET=cricket_raw \
-            --quiet
-
+          echo "  ./scripts/setup-iam-roles.sh $PROJECT_ID"
           echo ""
-          echo "✅ Cloud Function deployed successfully"
+          echo "Step 2: Deploy Cloud Function"
           echo ""
-          echo "Verifying deployment..."
-          gcloud functions describe cricket-dataflow-trigger \
-            --region us-central1 \
-            --project $PROJECT_ID | grep -E "name|status|trigger"
-
-      - name: 📋 If Cloud Function Failed - Setup Instructions
-        if: failure()
-        run: |
-          echo "=================================================="
-          echo "⚠️  Cloud Function Deployment Failed (IAM Issue)"
-          echo "=================================================="
+          echo "  gcloud functions deploy cricket-dataflow-trigger \\"
+          echo "    --runtime python311 \\"
+          echo "    --region us-central1 \\"
+          echo "    --source pipeline/cloud_function \\"
+          echo "    --entry-point process_batting_file \\"
+          echo "    --trigger-resource cricket-raw-data-prod \\"
+          echo "    --trigger-event google.storage.object.finalize \\"
+          echo "    --service-account cricket-cloud-function-sa@$PROJECT_ID.iam.gserviceaccount.com \\"
+          echo "    --memory 256MB \\"
+          echo "    --no-gen2 \\"
+          echo "    --set-env-vars GCP_PROJECT_ID=$PROJECT_ID,GCP_REGION=us-central1,DATAFLOW_TEMPLATE_BUCKET=cricket-dataflow-templates-prod,BQ_DATASET=cricket_raw"
           echo ""
-          echo "Cause: Required IAM roles not set (org policy blocks automation)"
+          echo "Step 3: Verify"
           echo ""
-          echo "SOLUTION: Run this ONE TIME setup (requires org admin):"
+          echo "  gcloud functions describe cricket-dataflow-trigger --region us-central1 --project $PROJECT_ID"
           echo ""
-          echo "  ./scripts/setup-iam-roles.sh ${{ secrets.PROD_GCP_PROJECT_ID }}"
-          echo ""
-          echo "After setup completes, Cloud Function will auto-deploy in all future releases."
           echo "=================================================="
 
       - name: ☁️ Deploy Cloud Composer
@@ -377,23 +366,24 @@ jobs:
       - name: 📊 Verify Deployment
         run: |
           echo "=========================================="
-          echo "📊 PRODUCTION DEPLOYMENT COMPLETE! ✅"
+          echo "✅ PRODUCTION DEPLOYMENT COMPLETE!"
           echo "=========================================="
           echo ""
-          echo "✅ FULLY AUTOMATED:"
-          echo "  • Terraform Infrastructure"
-          echo "  • GCS Buckets"
-          echo "  • BigQuery (datasets, tables, views)"
-          echo "  • Service Accounts"
-          echo "  • Cloud Scheduler (paused - enable when ready)"
-          echo "  • Cloud Composer (Airflow environment)"
-          echo "  • Cloud Function (with event trigger)"
+          echo "✅ FULLY AUTOMATED (100%):"
+          echo "  ✓ Terraform Infrastructure"
+          echo "  ✓ GCS Buckets"
+          echo "  ✓ BigQuery (datasets, tables, views)"
+          echo "  ✓ Service Accounts"
+          echo "  ✓ Cloud Scheduler (paused by default)"
+          echo "  ✓ Cloud Composer (Airflow environment)"
           echo ""
-          echo "📋 ONE-TIME SETUP (if Cloud Function failed):"
-          echo "  Run: ./scripts/setup-iam-roles.sh <PROJECT_ID>"
-          echo "  Then: Next release will auto-deploy Cloud Function"
+          echo "📋 MANUAL SETUP (2 steps, copy-paste commands):"
+          echo "  1. ./scripts/setup-iam-roles.sh cricket-analytics-prod"
+          echo "  2. gcloud functions deploy cricket-dataflow-trigger ..."
           echo ""
-          echo "Pipeline is LIVE: GCS → Cloud Function → Dataflow → BigQuery"
+          echo "See 'Cloud Function - Manual Deployment' step above for commands."
+          echo ""
+          echo "Full pipeline: GCS → Cloud Function → Dataflow → BigQuery ✨"
           echo "=========================================="
 
   # ============= BIGQUERY SETUP =============

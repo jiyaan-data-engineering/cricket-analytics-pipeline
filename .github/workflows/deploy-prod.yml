@@ -321,55 +321,65 @@ jobs:
           terraform apply -auto-approve prod.tfplan
           echo "✅ PRODUCTION infrastructure deployed successfully"
 
-      - name: 🔧 Deploy Cloud Function
+      - name: 📋 Cloud Function Setup Instructions
         run: |
-          echo "🔧 Deploying Cloud Function (2nd gen)..."
-
-          gcloud functions deploy cricket-dataflow-trigger \
-            --gen2 \
-            --runtime python311 \
-            --region us-central1 \
-            --source pipeline/cloud_function \
-            --entry-point process_batting_file \
-            --trigger-bucket cricket-raw-data-prod \
-            --service-account cricket-cloud-function-sa@${{ secrets.PROD_GCP_PROJECT_ID }}.iam.gserviceaccount.com \
-            --memory 256MB \
-            --timeout 60s \
-            --set-env-vars GCP_PROJECT_ID=${{ secrets.PROD_GCP_PROJECT_ID }},GCP_REGION=us-central1,DATAFLOW_TEMPLATE_BUCKET=cricket-dataflow-templates-prod,BQ_DATASET=cricket_raw \
-            --quiet
-
-          echo "✅ Cloud Function deployed successfully"
-
-      - name: 📋 Set IAM Roles for Cloud Function
-        run: |
-          echo "📋 Setting IAM roles for Cloud Function service account..."
-
+          echo "=================================================="
+          echo "⚠️  MANUAL SETUP REQUIRED: Cloud Function"
+          echo "=================================================="
+          echo ""
+          echo "GCP org policy restricts IAM role automation."
+          echo "Follow these steps to complete Cloud Function setup:"
+          echo ""
+          echo "1️⃣  GRANT IAM ROLES (Contact GCP Admin if blocked):"
+          echo ""
           PROJECT_ID="${{ secrets.PROD_GCP_PROJECT_ID }}"
           PROJECT_NUMBER=$(gcloud projects describe "$PROJECT_ID" --format='value(projectNumber)')
-          COMPUTE_SA="$PROJECT_NUMBER-compute@developer.gserviceaccount.com"
-          FUNCTION_SA="cricket-cloud-function-sa@$PROJECT_ID.iam.gserviceaccount.com"
-
-          gcloud projects add-iam-policy-binding "$PROJECT_ID" \
-            --member="serviceAccount:$COMPUTE_SA" \
-            --role="roles/storage.objectViewer" \
-            --quiet 2>&1 | grep -E "(Updated|already has)" || echo "⚠️ May already be set or blocked by policy"
-
-          gcloud projects add-iam-policy-binding "$PROJECT_ID" \
-            --member="serviceAccount:$FUNCTION_SA" \
-            --role="roles/storage.admin" \
-            --quiet 2>&1 | grep -E "(Updated|already has)" || echo "⚠️ May already be set or blocked by policy"
-
-          gcloud projects add-iam-policy-binding "$PROJECT_ID" \
-            --member="serviceAccount:$FUNCTION_SA" \
-            --role="roles/dataflow.admin" \
-            --quiet 2>&1 | grep -E "(Updated|already has)" || echo "⚠️ May already be set or blocked by policy"
-
-          gcloud projects add-iam-policy-binding "$PROJECT_ID" \
-            --member="serviceAccount:$FUNCTION_SA" \
-            --role="roles/iam.serviceAccountUser" \
-            --quiet 2>&1 | grep -E "(Updated|already has)" || echo "⚠️ May already be set or blocked by policy"
-
-          echo "✅ IAM roles configured"
+          echo "   gcloud projects add-iam-policy-binding $PROJECT_ID \\"
+          echo "     --member=serviceAccount:$PROJECT_NUMBER-compute@developer.gserviceaccount.com \\"
+          echo "     --role=roles/storage.objectViewer"
+          echo ""
+          echo "   gcloud projects add-iam-policy-binding $PROJECT_ID \\"
+          echo "     --member=serviceAccount:cricket-cloud-function-sa@$PROJECT_ID.iam.gserviceaccount.com \\"
+          echo "     --role=roles/storage.admin"
+          echo ""
+          echo "   gcloud projects add-iam-policy-binding $PROJECT_ID \\"
+          echo "     --member=serviceAccount:cricket-cloud-function-sa@$PROJECT_ID.iam.gserviceaccount.com \\"
+          echo "     --role=roles/dataflow.admin"
+          echo ""
+          echo "   gcloud projects add-iam-policy-binding $PROJECT_ID \\"
+          echo "     --member=serviceAccount:cricket-cloud-function-sa@$PROJECT_ID.iam.gserviceaccount.com \\"
+          echo "     --role=roles/iam.serviceAccountUser"
+          echo ""
+          echo "   gcloud projects add-iam-policy-binding $PROJECT_ID \\"
+          echo "     --member=serviceAccount:cricket-cloud-function-sa@$PROJECT_ID.iam.gserviceaccount.com \\"
+          echo "     --role=roles/eventarc.eventReceiver"
+          echo ""
+          echo "2️⃣  DEPLOY CLOUD FUNCTION (1st gen, simpler):"
+          echo ""
+          echo "   gcloud functions deploy cricket-dataflow-trigger \\"
+          echo "     --gen1 \\"
+          echo "     --runtime python311 \\"
+          echo "     --region us-central1 \\"
+          echo "     --source pipeline/cloud_function \\"
+          echo "     --entry-point process_batting_file \\"
+          echo "     --trigger-resource cricket-raw-data-prod \\"
+          echo "     --trigger-event google.storage.object.finalize \\"
+          echo "     --service-account cricket-cloud-function-sa@$PROJECT_ID.iam.gserviceaccount.com \\"
+          echo "     --memory 256MB \\"
+          echo "     --set-env-vars GCP_PROJECT_ID=$PROJECT_ID,GCP_REGION=us-central1,DATAFLOW_TEMPLATE_BUCKET=cricket-dataflow-templates-prod,BQ_DATASET=cricket_raw"
+          echo ""
+          echo "3️⃣  VERIFY DEPLOYMENT:"
+          echo ""
+          echo "   gcloud functions describe cricket-dataflow-trigger \\"
+          echo "     --region us-central1 \\"
+          echo "     --project $PROJECT_ID"
+          echo ""
+          echo "4️⃣  TEST TRIGGER:"
+          echo ""
+          echo "   gsutil cp sample.csv gs://cricket-raw-data-prod/batting/test.csv"
+          echo ""
+          echo "✅ See scripts/setup-cloud-function-iam.sh for automation help"
+          echo "=================================================="
 
       - name: 📊 Verify Deployment
         run: |

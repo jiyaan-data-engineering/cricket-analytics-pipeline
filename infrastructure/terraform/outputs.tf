@@ -119,6 +119,49 @@ output "cloud_function_next_steps" {
 }
 
 # ============================================================================
+# CLOUD SCHEDULER - DAILY PIPELINE TRIGGER
+# ============================================================================
+
+output "cloud_scheduler_job_name" {
+  value       = google_cloud_scheduler_job.cricket_analytics_trigger.name
+  description = "Cloud Scheduler job name"
+}
+
+output "cloud_scheduler_schedule" {
+  value       = google_cloud_scheduler_job.cricket_analytics_trigger.schedule
+  description = "Cloud Scheduler cron expression (0 6 * * * = daily at 06:00 UTC)"
+}
+
+output "cloud_scheduler_next_steps" {
+  value       = <<-EOT
+    Cloud Scheduler Setup (PAUSED by default - enable when ready):
+
+    1. Create Cloud Run service for ingestion:
+       gcloud run deploy cricket-ingestion \
+         --source pipeline/ingestion \
+         --runtime python311 \
+         --region ${var.gcp_region} \
+         --allow-unauthenticated
+
+    2. Update Cloud Scheduler with actual Cloud Run URL:
+       gcloud scheduler jobs update http cricket-analytics-ingestion \
+         --schedule "0 6 * * *" \
+         --uri "https://cricket-ingestion-HASH.${var.gcp_region}.run.app/trigger" \
+         --oidc-service-account-email cricket-cloud-run-sa@${var.gcp_project_id}.iam.gserviceaccount.com \
+         --oidc-token-audience "https://cricket-ingestion-HASH.${var.gcp_region}.run.app"
+
+    3. Enable the scheduler job:
+       gcloud scheduler jobs resume cricket-analytics-ingestion --location ${var.gcp_region}
+
+    4. View scheduled runs:
+       gcloud scheduler jobs describe cricket-analytics-ingestion --location ${var.gcp_region}
+
+    Daily Trigger: 06:00 UTC → Cloud Run → API Ingestion → CSV to GCS → Cloud Function → Dataflow → BigQuery
+  EOT
+  description = "Cloud Scheduler setup steps"
+}
+
+# ============================================================================
 # LOOKER STUDIO DASHBOARD
 # ============================================================================
 

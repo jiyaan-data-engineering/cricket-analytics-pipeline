@@ -413,6 +413,52 @@ resource "null_resource" "make_iam_script_executable" {
 }
 
 # ============================================================================
+# CLOUD SCHEDULER - DAILY PIPELINE TRIGGER
+# ============================================================================
+
+resource "google_cloud_scheduler_job" "cricket_analytics_trigger" {
+  name             = "cricket-analytics-ingestion"
+  description      = "Daily trigger for cricket analytics pipeline at 06:00 UTC"
+  schedule         = "0 6 * * *"  # Daily at 06:00 UTC
+  time_zone        = "UTC"
+  attempt_deadline = "600s"  # 10 minutes
+  project          = var.gcp_project_id
+  region           = var.gcp_region
+
+  # HTTP target configuration - will trigger Cloud Run or custom endpoint
+  http_target {
+    # Replace with your Cloud Run service URL or custom endpoint
+    # Example: https://cricket-ingestion-RANDOM.us-central1.run.app
+    uri = "https://cricket-ingestion-${var.gcp_project_id}.ew.r.appspot.com/trigger"
+
+    http_method = "POST"
+
+    headers = {
+      "Content-Type" = "application/json"
+    }
+
+    oidc_token {
+      service_account_email = google_service_account.cloud_run.email
+    }
+  }
+
+  depends_on = [
+    google_project_service.required_apis["cloudscheduler.googleapis.com"]
+  ]
+}
+
+resource "google_cloud_scheduler_job_pause" "cricket_analytics_trigger_pause" {
+  name    = google_cloud_scheduler_job.cricket_analytics_trigger.name
+  paused  = true
+  region  = var.gcp_region
+  project = var.gcp_project_id
+
+  depends_on = [
+    google_cloud_scheduler_job.cricket_analytics_trigger
+  ]
+}
+
+# ============================================================================
 # EVENT-DRIVEN & ORCHESTRATION RESOURCES (DEPLOYED MANUALLY)
 # ============================================================================
 # Note: Cloud Function, Eventarc, Cloud Run, Cloud Scheduler, and Cloud Composer

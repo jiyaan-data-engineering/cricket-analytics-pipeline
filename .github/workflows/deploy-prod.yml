@@ -321,6 +321,15 @@ jobs:
           terraform apply -auto-approve prod.tfplan
           echo "✅ PRODUCTION infrastructure deployed successfully"
 
+      - name: 🐳 Build Dataflow Flex Template
+        run: |
+          echo "🐳 Building Dataflow Flex Template..."
+          echo ""
+          chmod +x scripts/build-dataflow-template.sh
+          scripts/build-dataflow-template.sh ${{ secrets.PROD_GCP_PROJECT_ID }} us-central1
+          echo ""
+          echo "✅ Dataflow Flex Template built and pushed successfully"
+
       - name: 📋 Cloud Function - Manual Deployment
         run: |
           echo "=================================================="

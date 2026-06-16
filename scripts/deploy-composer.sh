@@ -19,13 +19,20 @@ echo "Environment: $ENVIRONMENT_NAME"
 echo ""
 
 # Create Cloud Composer environment
-echo "⏳ Creating Cloud Composer environment (this takes 10-15 minutes)..."
+echo "⏳ Checking if Cloud Composer environment exists..."
 
-gcloud composer environments create $ENVIRONMENT_NAME \
-  --project=$PROJECT_ID \
+if gcloud composer environments describe $ENVIRONMENT_NAME \
   --location=$REGION \
-  --service-account=$SERVICE_ACCOUNT \
-  --env-variables=\
+  --project=$PROJECT_ID &>/dev/null; then
+  echo "✅ Cloud Composer environment already exists - skipping creation"
+else
+  echo "⏳ Creating Cloud Composer environment (this takes 10-15 minutes)..."
+
+  gcloud composer environments create $ENVIRONMENT_NAME \
+    --project=$PROJECT_ID \
+    --location=$REGION \
+    --service-account=$SERVICE_ACCOUNT \
+    --env-variables=\
 GCP_PROJECT_ID=$PROJECT_ID,\
 GCP_REGION=$REGION,\
 BQ_RAW_DATASET=cricket_raw,\
@@ -34,7 +41,8 @@ BQ_CURATED_DATASET=cricket_curated,\
 DATAFLOW_TEMPLATE_BUCKET=cricket-dataflow-templates-prod,\
 RAW_BUCKET=cricket-raw-data-prod
 
-echo "✅ Cloud Composer environment created successfully!"
+  echo "✅ Cloud Composer environment created successfully!"
+fi
 echo ""
 echo "🚀 Deploying DAGs..."
 

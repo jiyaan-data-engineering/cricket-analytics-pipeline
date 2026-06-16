@@ -366,25 +366,21 @@ resource "google_cloudfunctions_function" "dataflow_trigger" {
 
   depends_on = [
     google_project_service.required_apis["cloudfunctions.googleapis.com"],
-    null_resource.cloud_function_package,
-    google_project_iam_member.compute_storage_admin,
-    google_project_iam_member.cloud_function_storage_admin
+    null_resource.cloud_function_package
   ]
 }
 
-# Grant default Compute service account storage access (needed for Cloud Function build)
-resource "google_project_iam_member" "compute_storage_admin" {
-  project = var.gcp_project_id
-  role    = "roles/storage.objectViewer"
-  member  = "serviceAccount:${data.google_project.current.number}-compute@developer.gserviceaccount.com"
-}
-
-# Grant Cloud Function service account storage admin (for runtime)
-resource "google_project_iam_member" "cloud_function_storage_admin" {
-  project = var.gcp_project_id
-  role    = "roles/storage.admin"
-  member  = "serviceAccount:${google_service_account.cloud_function.email}"
-}
+# ⚠️  IAM roles MUST be set manually due to GCP org policy
+# These two roles are required for Cloud Function to work:
+#
+# 1. Default Compute service account needs roles/storage.objectViewer
+#    (for Cloud Function build process to access source in GCS)
+#
+# 2. cricket-cloud-function-sa needs roles/storage.admin
+#    (for Cloud Function runtime to access GCS buckets)
+#
+# Run the setup script after Terraform apply:
+#   ./scripts/setup-cloud-function-iam.sh cricket-analytics-prod
 
 # IAM roles for Cloud Function service account - MUST BE SET MANUALLY due to GCP org policy
 # After Terraform apply, run these gcloud commands:
@@ -412,44 +408,51 @@ resource "local_file" "cloud_function_iam_setup" {
     COMPUTE_SA="$PROJECT_NUMBER-compute@developer.gserviceaccount.com"
     FUNCTION_SA="cricket-cloud-function-sa@$PROJECT_ID.iam.gserviceaccount.com"
 
-    echo "Setting up IAM roles for Cloud Function..."
-    echo "  Project: $PROJECT_ID"
-    echo "  Project Number: $PROJECT_NUMBER"
-    echo "  Compute SA: $COMPUTE_SA"
-    echo "  Function SA: $FUNCTION_SA"
+    echo "========================================="
+    echo "Cloud Function IAM Setup"
+    echo "========================================="
+    echo "Project:      $PROJECT_ID"
+    echo "Project #:    $PROJECT_NUMBER"
+    echo "Compute SA:   $COMPUTE_SA"
+    echo "Function SA:  $FUNCTION_SA"
     echo ""
 
-    echo "1️⃣  Granting Compute service account Storage Object Viewer (for CF build)..."
+    echo "⏳ Setting IAM roles (may require GCP org admin approval)..."
+    echo ""
+
+    echo "1️⃣  Storage Object Viewer for Compute SA (Cloud Function build)"
     gcloud projects add-iam-policy-binding "$PROJECT_ID" \
       --member="serviceAccount:$COMPUTE_SA" \
       --role="roles/storage.objectViewer" \
-      --condition=None 2>/dev/null || echo "⚠️  Could not set (org policy may block this). Run manually if needed."
+      --quiet 2>&1 | grep -E "(Updated|already has|403)" || true
 
     echo ""
-    echo "2️⃣  Granting Cloud Function service account Storage Admin..."
+    echo "2️⃣  Storage Admin for Cloud Function SA (runtime access)"
     gcloud projects add-iam-policy-binding "$PROJECT_ID" \
       --member="serviceAccount:$FUNCTION_SA" \
       --role="roles/storage.admin" \
-      --condition=None 2>/dev/null || echo "⚠️  Could not set (org policy may block this). Run manually if needed."
+      --quiet 2>&1 | grep -E "(Updated|already has|403)" || true
 
     echo ""
-    echo "3️⃣  Granting Cloud Function service account Dataflow Admin..."
+    echo "3️⃣  Dataflow Admin for Cloud Function SA (Dataflow trigger)"
     gcloud projects add-iam-policy-binding "$PROJECT_ID" \
       --member="serviceAccount:$FUNCTION_SA" \
       --role="roles/dataflow.admin" \
-      --condition=None 2>/dev/null || echo "⚠️  Could not set (org policy may block this). Run manually if needed."
+      --quiet 2>&1 | grep -E "(Updated|already has|403)" || true
 
     echo ""
-    echo "4️⃣  Granting Cloud Function service account Service Account User..."
+    echo "4️⃣  Service Account User for Cloud Function SA"
     gcloud projects add-iam-policy-binding "$PROJECT_ID" \
       --member="serviceAccount:$FUNCTION_SA" \
       --role="roles/iam.serviceAccountUser" \
-      --condition=None 2>/dev/null || echo "⚠️  Could not set (org policy may block this). Run manually if needed."
+      --quiet 2>&1 | grep -E "(Updated|already has|403)" || true
 
     echo ""
-    echo "✅ IAM setup complete! If any roles failed, contact your GCP org admin."
-
-    echo "✅ Cloud Function IAM roles configured"
+    echo "========================================="
+    echo "✅ IAM setup complete!"
+    echo "========================================="
+    echo ""
+    echo "If any roles failed with 403, contact your GCP org admin."
   EOT
 
   depends_on = [

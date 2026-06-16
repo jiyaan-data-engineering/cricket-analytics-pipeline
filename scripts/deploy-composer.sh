@@ -23,7 +23,6 @@ echo "⏳ Creating Cloud Composer environment (this takes 10-15 minutes)..."
 gcloud composer environments create $ENVIRONMENT_NAME \
   --project=$PROJECT_ID \
   --location=$REGION \
-  --node-count=3 \
   --env-variables=\
 GCP_PROJECT_ID=$PROJECT_ID,\
 GCP_REGION=$REGION,\

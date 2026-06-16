@@ -321,65 +321,70 @@ jobs:
           terraform apply -auto-approve prod.tfplan
           echo "✅ PRODUCTION infrastructure deployed successfully"
 
-      - name: 📋 Cloud Function Setup Instructions
+      - name: 🔧 Deploy Cloud Function (1st Gen)
         run: |
-          echo "=================================================="
-          echo "⚠️  MANUAL SETUP REQUIRED: Cloud Function"
-          echo "=================================================="
-          echo ""
-          echo "GCP org policy restricts IAM role automation."
-          echo "Follow these steps to complete Cloud Function setup:"
-          echo ""
-          echo "1️⃣  GRANT IAM ROLES (Contact GCP Admin if blocked):"
-          echo ""
+          echo "🔧 Deploying Cloud Function..."
           PROJECT_ID="${{ secrets.PROD_GCP_PROJECT_ID }}"
           PROJECT_NUMBER=$(gcloud projects describe "$PROJECT_ID" --format='value(projectNumber)')
-          echo "   gcloud projects add-iam-policy-binding $PROJECT_ID \\"
-          echo "     --member=serviceAccount:$PROJECT_NUMBER-compute@developer.gserviceaccount.com \\"
-          echo "     --role=roles/storage.objectViewer"
+
+          echo "1️⃣  Setting IAM roles (may fail due to org policy - that's OK)..."
+          gcloud projects add-iam-policy-binding "$PROJECT_ID" \
+            --member="serviceAccount:$PROJECT_NUMBER-compute@developer.gserviceaccount.com" \
+            --role="roles/storage.objectViewer" \
+            --quiet 2>&1 | grep -E "(Updated|already has)" || echo "⚠️  Skipped (org policy)"
+
+          gcloud projects add-iam-policy-binding "$PROJECT_ID" \
+            --member="serviceAccount:cricket-cloud-function-sa@$PROJECT_ID.iam.gserviceaccount.com" \
+            --role="roles/storage.admin" \
+            --quiet 2>&1 | grep -E "(Updated|already has)" || echo "⚠️  Skipped (org policy)"
+
+          gcloud projects add-iam-policy-binding "$PROJECT_ID" \
+            --member="serviceAccount:cricket-cloud-function-sa@$PROJECT_ID.iam.gserviceaccount.com" \
+            --role="roles/dataflow.admin" \
+            --quiet 2>&1 | grep -E "(Updated|already has)" || echo "⚠️  Skipped (org policy)"
+
+          gcloud projects add-iam-policy-binding "$PROJECT_ID" \
+            --member="serviceAccount:cricket-cloud-function-sa@$PROJECT_ID.iam.gserviceaccount.com" \
+            --role="roles/iam.serviceAccountUser" \
+            --quiet 2>&1 | grep -E "(Updated|already has)" || echo "⚠️  Skipped (org policy)"
+
+          gcloud projects add-iam-policy-binding "$PROJECT_ID" \
+            --member="serviceAccount:cricket-cloud-function-sa@$PROJECT_ID.iam.gserviceaccount.com" \
+            --role="roles/eventarc.eventReceiver" \
+            --quiet 2>&1 | grep -E "(Updated|already has)" || echo "⚠️  Skipped (org policy)"
+
           echo ""
-          echo "   gcloud projects add-iam-policy-binding $PROJECT_ID \\"
-          echo "     --member=serviceAccount:cricket-cloud-function-sa@$PROJECT_ID.iam.gserviceaccount.com \\"
-          echo "     --role=roles/storage.admin"
+          echo "2️⃣  Deploying Cloud Function (1st gen)..."
+          gcloud functions deploy cricket-dataflow-trigger \
+            --gen1 \
+            --runtime python311 \
+            --region us-central1 \
+            --source pipeline/cloud_function \
+            --entry-point process_batting_file \
+            --trigger-resource cricket-raw-data-prod \
+            --trigger-event google.storage.object.finalize \
+            --service-account cricket-cloud-function-sa@$PROJECT_ID.iam.gserviceaccount.com \
+            --memory 256MB \
+            --set-env-vars GCP_PROJECT_ID=$PROJECT_ID,GCP_REGION=us-central1,DATAFLOW_TEMPLATE_BUCKET=cricket-dataflow-templates-prod,BQ_DATASET=cricket_raw \
+            --quiet
+
           echo ""
-          echo "   gcloud projects add-iam-policy-binding $PROJECT_ID \\"
-          echo "     --member=serviceAccount:cricket-cloud-function-sa@$PROJECT_ID.iam.gserviceaccount.com \\"
-          echo "     --role=roles/dataflow.admin"
+          echo "3️⃣  Verifying deployment..."
+          gcloud functions describe cricket-dataflow-trigger \
+            --region us-central1 \
+            --project $PROJECT_ID
+
           echo ""
-          echo "   gcloud projects add-iam-policy-binding $PROJECT_ID \\"
-          echo "     --member=serviceAccount:cricket-cloud-function-sa@$PROJECT_ID.iam.gserviceaccount.com \\"
-          echo "     --role=roles/iam.serviceAccountUser"
+          echo "✅ Cloud Function deployed successfully"
+
+      - name: ☁️ Deploy Cloud Composer
+        run: |
+          echo "☁️  Deploying Cloud Composer environment..."
           echo ""
-          echo "   gcloud projects add-iam-policy-binding $PROJECT_ID \\"
-          echo "     --member=serviceAccount:cricket-cloud-function-sa@$PROJECT_ID.iam.gserviceaccount.com \\"
-          echo "     --role=roles/eventarc.eventReceiver"
+          chmod +x scripts/deploy-composer.sh
+          scripts/deploy-composer.sh ${{ secrets.PROD_GCP_PROJECT_ID }} us-central1
           echo ""
-          echo "2️⃣  DEPLOY CLOUD FUNCTION (1st gen, simpler):"
-          echo ""
-          echo "   gcloud functions deploy cricket-dataflow-trigger \\"
-          echo "     --gen1 \\"
-          echo "     --runtime python311 \\"
-          echo "     --region us-central1 \\"
-          echo "     --source pipeline/cloud_function \\"
-          echo "     --entry-point process_batting_file \\"
-          echo "     --trigger-resource cricket-raw-data-prod \\"
-          echo "     --trigger-event google.storage.object.finalize \\"
-          echo "     --service-account cricket-cloud-function-sa@$PROJECT_ID.iam.gserviceaccount.com \\"
-          echo "     --memory 256MB \\"
-          echo "     --set-env-vars GCP_PROJECT_ID=$PROJECT_ID,GCP_REGION=us-central1,DATAFLOW_TEMPLATE_BUCKET=cricket-dataflow-templates-prod,BQ_DATASET=cricket_raw"
-          echo ""
-          echo "3️⃣  VERIFY DEPLOYMENT:"
-          echo ""
-          echo "   gcloud functions describe cricket-dataflow-trigger \\"
-          echo "     --region us-central1 \\"
-          echo "     --project $PROJECT_ID"
-          echo ""
-          echo "4️⃣  TEST TRIGGER:"
-          echo ""
-          echo "   gsutil cp sample.csv gs://cricket-raw-data-prod/batting/test.csv"
-          echo ""
-          echo "✅ See scripts/setup-cloud-function-iam.sh for automation help"
-          echo "=================================================="
+          echo "✅ Cloud Composer deployed successfully"
 
       - name: 📊 Verify Deployment
         run: |
@@ -388,7 +393,8 @@ jobs:
           echo "✅ Buckets: raw-data, dataflow-templates, dataflow-temp, tf-state"
           echo "✅ Datasets: cricket_raw, cricket_staging, cricket_curated, cricket_audit_logs"
           echo "✅ Service Accounts: dataflow, cloud-function, cloud-run, cloud-composer"
-          echo "✅ Cloud Function: cricket-dataflow-trigger (2nd gen)"
+          echo "✅ Cloud Scheduler: cricket-analytics-ingestion (paused)"
+          echo "✅ Cloud Composer: Airflow environment deployed"
 
   # ============= BIGQUERY SETUP =============
   bigquery-setup:

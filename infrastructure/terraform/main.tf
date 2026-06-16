@@ -419,18 +419,14 @@ resource "null_resource" "make_iam_script_executable" {
 resource "google_cloud_scheduler_job" "cricket_analytics_trigger" {
   name             = "cricket-analytics-ingestion"
   description      = "Daily trigger for cricket analytics pipeline at 06:00 UTC"
-  schedule         = "0 6 * * *"  # Daily at 06:00 UTC
+  schedule         = "0 6 * * *"
   time_zone        = "UTC"
-  attempt_deadline = "600s"  # 10 minutes
+  attempt_deadline = "600s"
   project          = var.gcp_project_id
   region           = var.gcp_region
 
-  # HTTP target configuration - will trigger Cloud Run or custom endpoint
   http_target {
-    # Replace with your Cloud Run service URL or custom endpoint
-    # Example: https://cricket-ingestion-RANDOM.us-central1.run.app
-    uri = "https://cricket-ingestion-${var.gcp_project_id}.ew.r.appspot.com/trigger"
-
+    uri         = "https://cricket-ingestion-${var.gcp_project_id}.ew.r.appspot.com/trigger"
     http_method = "POST"
 
     headers = {

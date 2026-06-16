@@ -87,12 +87,14 @@ output "cloud_composer_service_account" {
 }
 
 # ============================================================================
-# CLOUD FUNCTION - EVENT-DRIVEN DATAFLOW TRIGGER
+# CLOUD FUNCTION - DEPLOYED VIA GITHUB ACTIONS
 # ============================================================================
+# Cloud Function is now deployed via GitHub Actions workflow using gcloud
+# See: .github/workflows/deploy-prod.yml for deployment details
 
-output "cloud_function_name" {
-  value       = google_cloudfunctions_function.dataflow_trigger.name
-  description = "Cloud Function name"
+output "cloud_function_status" {
+  value       = "✅ Cloud Function: cricket-dataflow-trigger (deployed via GitHub Actions)"
+  description = "Cloud Function deployment status"
 }
 
 output "cloud_function_trigger_bucket" {
@@ -100,30 +102,20 @@ output "cloud_function_trigger_bucket" {
   description = "GCS bucket that triggers Cloud Function"
 }
 
-output "cloud_function_status" {
-  value       = "✅ Event-driven pipeline DEPLOYED: CSV → GCS → Cloud Function → Dataflow → BigQuery"
-  description = "Cloud Function deployment status"
-}
-
-output "cloud_function_iam_setup_script" {
-  value       = local_file.cloud_function_iam_setup.filename
-  description = "Path to Cloud Function IAM roles setup script (must run manually)"
-}
-
 output "cloud_function_next_steps" {
   value       = <<-EOT
-    Cloud Function deployed! Complete setup with:
+    Cloud Function deployed via GitHub Actions workflow!
 
-    1. Set IAM roles:
-       ./scripts/setup-cloud-function-iam.sh ${var.gcp_project_id}
+    Verify deployment:
+    gcloud functions describe cricket-dataflow-trigger --region=${var.gcp_region} --project=${var.gcp_project_id}
 
-    2. Verify Cloud Function:
-       gcloud functions describe cricket-dataflow-trigger --region=${var.gcp_region} --project=${var.gcp_project_id}
+    Test trigger by uploading CSV:
+    gsutil cp sample.csv gs://${google_storage_bucket.raw_data.name}/batting/sample.csv
 
-    3. Test trigger (upload CSV to bucket):
-       gsutil cp sample.csv gs://${google_storage_bucket.raw_data.name}/batting/
+    Monitor execution:
+    gcloud functions logs read cricket-dataflow-trigger --region=${var.gcp_region} --limit 50
   EOT
-  description = "Next steps for Cloud Function setup"
+  description = "Cloud Function deployment and verification steps"
 }
 
 # ============================================================================

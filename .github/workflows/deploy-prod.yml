@@ -354,9 +354,9 @@ jobs:
             --quiet 2>&1 | grep -E "(Updated|already has)" || echo "⚠️  Skipped (org policy)"
 
           echo ""
-          echo "2️⃣  Deploying Cloud Function (1st gen)..."
+          echo "2️⃣  Deploying Cloud Function (1st generation)..."
           gcloud functions deploy cricket-dataflow-trigger \
-            --gen1 \
+            --generation=1 \
             --runtime python311 \
             --region us-central1 \
             --source pipeline/cloud_function \

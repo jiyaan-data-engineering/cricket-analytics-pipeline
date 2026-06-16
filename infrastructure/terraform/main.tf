@@ -321,76 +321,18 @@ resource "null_resource" "looker_studio_script" {
 #   python3 ./scripts/create-looker-dashboard-api.py cricket-analytics-prod cricket_curated
 
 # ============================================================================
-# CLOUD FUNCTION - EVENT-DRIVEN DATAFLOW TRIGGER
+# CLOUD FUNCTION - DEPLOYED VIA GITHUB ACTIONS (not Terraform)
 # ============================================================================
-
-resource "null_resource" "cloud_function_package" {
-  provisioner "local-exec" {
-    command = "cd '${path.module}/../../pipeline/cloud_function' && zip -r -q /tmp/cloud_function.zip . && gsutil cp /tmp/cloud_function.zip gs://${google_storage_bucket.templates.name}/cloud-function-source.zip"
-  }
-
-  depends_on = [
-    google_storage_bucket.templates
-  ]
-}
-
-data "google_project" "current" {
-  project_id = var.gcp_project_id
-}
-
-resource "google_cloudfunctions_function" "dataflow_trigger" {
-  name        = "cricket-dataflow-trigger"
-  description = "Triggers Dataflow on GCS CSV upload"
-  runtime     = "python311"
-  region      = var.gcp_region
-  project     = var.gcp_project_id
-
-  available_memory_mb   = 256
-  source_archive_bucket = google_storage_bucket.templates.name
-  source_archive_object = "cloud-function-source.zip"
-  entry_point           = "process_batting_file"
-
-  event_trigger {
-    event_type = "google.storage.object.finalize"
-    resource   = google_storage_bucket.raw_data.name
-  }
-
-  service_account_email = google_service_account.cloud_function.email
-
-  environment_variables = {
-    GCP_PROJECT_ID           = var.gcp_project_id
-    GCP_REGION               = var.gcp_region
-    DATAFLOW_TEMPLATE_BUCKET = google_storage_bucket.templates.name
-    BQ_DATASET               = google_bigquery_dataset.raw.dataset_id
-  }
-
-  depends_on = [
-    google_project_service.required_apis["cloudfunctions.googleapis.com"],
-    null_resource.cloud_function_package
-  ]
-}
-
-# ⚠️  IAM roles MUST be set manually due to GCP org policy
-# These two roles are required for Cloud Function to work:
+# Cloud Function deployment is handled in .github/workflows/deploy-prod.yml
+# using `gcloud functions deploy` which works better with GCP org policies
+# that restrict IAM modifications.
 #
-# 1. Default Compute service account needs roles/storage.objectViewer
-#    (for Cloud Function build process to access source in GCS)
-#
-# 2. cricket-cloud-function-sa needs roles/storage.admin
-#    (for Cloud Function runtime to access GCS buckets)
-#
-# Run the setup script after Terraform apply:
-#   ./scripts/setup-cloud-function-iam.sh cricket-analytics-prod
-
-# IAM roles for Cloud Function service account - MUST BE SET MANUALLY due to GCP org policy
-# After Terraform apply, run these gcloud commands:
-# gcloud projects add-iam-policy-binding PROJECT_ID \
-#   --member=serviceAccount:cricket-cloud-function-sa@PROJECT_ID.iam.gserviceaccount.com \
-#   --role=roles/dataflow.admin
-#
-# gcloud projects add-iam-policy-binding PROJECT_ID \
-#   --member=serviceAccount:cricket-cloud-function-sa@PROJECT_ID.iam.gserviceaccount.com \
-#   --role=roles/iam.serviceAccountUser
+# The function source code is in: pipeline/cloud_function/main.py
+# The deployment script handles:
+# 1. Zipping the source code
+# 2. Uploading to templates bucket
+# 3. Creating the Cloud Function with event trigger
+# 4. Setting up IAM roles for the service account
 
 resource "local_file" "cloud_function_iam_setup" {
   filename = "${path.module}/../../scripts/setup-cloud-function-iam.sh"

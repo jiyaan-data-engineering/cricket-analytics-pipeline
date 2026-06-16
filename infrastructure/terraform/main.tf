@@ -324,16 +324,14 @@ resource "null_resource" "looker_studio_script" {
 # CLOUD FUNCTION - EVENT-DRIVEN DATAFLOW TRIGGER
 # ============================================================================
 
-data "archive_file" "cloud_function_zip" {
-  type        = "zip"
-  source_dir  = "${path.module}/../../pipeline/cloud_function"
-  output_path = "${path.module}/.terraform/cloud_function.zip"
-}
+resource "null_resource" "cloud_function_package" {
+  provisioner "local-exec" {
+    command = "cd '${path.module}/../../pipeline/cloud_function' && zip -r -q /tmp/cloud_function.zip . && gsutil cp /tmp/cloud_function.zip gs://${google_storage_bucket.templates.name}/cloud-function-source.zip"
+  }
 
-resource "google_storage_bucket_object" "cloud_function_source" {
-  name   = "cloud-function-source.zip"
-  bucket = google_storage_bucket.templates.name
-  source = data.archive_file.cloud_function_zip.output_path
+  depends_on = [
+    google_storage_bucket.templates
+  ]
 }
 
 resource "google_cloudfunctions_function" "dataflow_trigger" {
@@ -345,7 +343,7 @@ resource "google_cloudfunctions_function" "dataflow_trigger" {
 
   available_memory_mb   = 256
   source_archive_bucket = google_storage_bucket.templates.name
-  source_archive_object = google_storage_bucket_object.cloud_function_source.name
+  source_archive_object = "cloud-function-source.zip"
   entry_point           = "process_batting_file"
 
   event_trigger {
@@ -364,22 +362,60 @@ resource "google_cloudfunctions_function" "dataflow_trigger" {
 
   depends_on = [
     google_project_service.required_apis["cloudfunctions.googleapis.com"],
-    google_storage_bucket_object.cloud_function_source,
-    google_project_iam_member.cloud_function_dataflow_admin,
-    google_project_iam_member.cloud_function_service_account_user
+    null_resource.cloud_function_package
   ]
 }
 
-resource "google_project_iam_member" "cloud_function_dataflow_admin" {
-  project = var.gcp_project_id
-  role    = "roles/dataflow.admin"
-  member  = "serviceAccount:${google_service_account.cloud_function.email}"
+# IAM roles for Cloud Function service account - MUST BE SET MANUALLY due to GCP org policy
+# After Terraform apply, run these gcloud commands:
+# gcloud projects add-iam-policy-binding PROJECT_ID \
+#   --member=serviceAccount:cricket-cloud-function-sa@PROJECT_ID.iam.gserviceaccount.com \
+#   --role=roles/dataflow.admin
+#
+# gcloud projects add-iam-policy-binding PROJECT_ID \
+#   --member=serviceAccount:cricket-cloud-function-sa@PROJECT_ID.iam.gserviceaccount.com \
+#   --role=roles/iam.serviceAccountUser
+
+resource "local_file" "cloud_function_iam_setup" {
+  filename = "${path.module}/../../scripts/setup-cloud-function-iam.sh"
+  content  = <<-EOT
+    #!/bin/bash
+    set -e
+
+    PROJECT_ID=$1
+    if [ -z "$PROJECT_ID" ]; then
+      echo "Usage: setup-cloud-function-iam.sh <PROJECT_ID>"
+      exit 1
+    fi
+
+    echo "Setting up IAM roles for Cloud Function service account..."
+
+    gcloud projects add-iam-policy-binding "$PROJECT_ID" \
+      --member="serviceAccount:cricket-cloud-function-sa@$PROJECT_ID.iam.gserviceaccount.com" \
+      --role="roles/dataflow.admin" \
+      --condition=None
+
+    gcloud projects add-iam-policy-binding "$PROJECT_ID" \
+      --member="serviceAccount:cricket-cloud-function-sa@$PROJECT_ID.iam.gserviceaccount.com" \
+      --role="roles/iam.serviceAccountUser" \
+      --condition=None
+
+    echo "✅ Cloud Function IAM roles configured"
+  EOT
+
+  depends_on = [
+    google_service_account.cloud_function
+  ]
 }
 
-resource "google_project_iam_member" "cloud_function_service_account_user" {
-  project = var.gcp_project_id
-  role    = "roles/iam.serviceAccountUser"
-  member  = "serviceAccount:${google_service_account.cloud_function.email}"
+resource "null_resource" "make_iam_script_executable" {
+  provisioner "local-exec" {
+    command = "chmod +x '${local_file.cloud_function_iam_setup.filename}'"
+  }
+
+  depends_on = [
+    local_file.cloud_function_iam_setup
+  ]
 }
 
 # ============================================================================

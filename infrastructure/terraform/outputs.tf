@@ -101,8 +101,29 @@ output "cloud_function_trigger_bucket" {
 }
 
 output "cloud_function_status" {
-  value       = "✅ Event-driven pipeline ACTIVE: CSV → GCS → Cloud Function → Dataflow → BigQuery"
+  value       = "✅ Event-driven pipeline DEPLOYED: CSV → GCS → Cloud Function → Dataflow → BigQuery"
   description = "Cloud Function deployment status"
+}
+
+output "cloud_function_iam_setup_script" {
+  value       = local_file.cloud_function_iam_setup.filename
+  description = "Path to Cloud Function IAM roles setup script (must run manually)"
+}
+
+output "cloud_function_next_steps" {
+  value       = <<-EOT
+    Cloud Function deployed! Complete setup with:
+
+    1. Set IAM roles:
+       ./scripts/setup-cloud-function-iam.sh ${var.gcp_project_id}
+
+    2. Verify Cloud Function:
+       gcloud functions describe cricket-dataflow-trigger --region=${var.gcp_region} --project=${var.gcp_project_id}
+
+    3. Test trigger (upload CSV to bucket):
+       gsutil cp sample.csv gs://${google_storage_bucket.raw_data.name}/batting/
+  EOT
+  description = "Next steps for Cloud Function setup"
 }
 
 # ============================================================================

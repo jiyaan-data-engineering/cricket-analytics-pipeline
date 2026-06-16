@@ -136,16 +136,22 @@ gcloud builds submit \
   gs://cricket-dataflow-templates-prod/flex-template.yaml
 ```
 
-### 2. Create Cloud Function
+### 2. Complete Cloud Function Setup (After Terraform Apply)
 ```bash
-gcloud functions deploy cricket-dataflow-trigger \
-  --runtime python3.11 \
-  --trigger-event-type google.cloud.storage.object.v1.finalized \
-  --trigger-resource cricket-raw-data-prod \
-  --entry-point process_batting_file \
-  --source=pipeline/cloud_function \
+# Step 1: Set IAM roles for Cloud Function service account
+./scripts/setup-cloud-function-iam.sh cricket-analytics-prod
+
+# Step 2: Verify Cloud Function is created
+gcloud functions describe cricket-dataflow-trigger \
+  --region=us-central1 \
   --project=cricket-analytics-prod
+
+# Step 3: Test the Cloud Function by uploading a CSV
+gsutil cp sample.csv gs://cricket-raw-data-prod/batting/
+# This should trigger Dataflow automatically
 ```
+
+**Note**: Cloud Function is now fully automated via Terraform (1st gen). The IAM roles setup is manual due to GCP org policy restrictions.
 
 ### 3. Create Cloud Scheduler Job
 ```bash

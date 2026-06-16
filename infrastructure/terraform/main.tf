@@ -422,6 +422,7 @@ resource "google_cloud_scheduler_job" "cricket_analytics_trigger" {
   schedule         = "0 6 * * *"
   time_zone        = "UTC"
   attempt_deadline = "600s"
+  paused           = true
   project          = var.gcp_project_id
   region           = var.gcp_region
 
@@ -440,17 +441,6 @@ resource "google_cloud_scheduler_job" "cricket_analytics_trigger" {
 
   depends_on = [
     google_project_service.required_apis["cloudscheduler.googleapis.com"]
-  ]
-}
-
-resource "google_cloud_scheduler_job_pause" "cricket_analytics_trigger_pause" {
-  name    = google_cloud_scheduler_job.cricket_analytics_trigger.name
-  paused  = true
-  region  = var.gcp_region
-  project = var.gcp_project_id
-
-  depends_on = [
-    google_cloud_scheduler_job.cricket_analytics_trigger
   ]
 }
 

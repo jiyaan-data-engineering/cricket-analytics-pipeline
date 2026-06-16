@@ -334,6 +334,10 @@ resource "null_resource" "cloud_function_package" {
   ]
 }
 
+data "google_project" "current" {
+  project_id = var.gcp_project_id
+}
+
 resource "google_cloudfunctions_function" "dataflow_trigger" {
   name        = "cricket-dataflow-trigger"
   description = "Triggers Dataflow on GCS CSV upload"
@@ -362,8 +366,24 @@ resource "google_cloudfunctions_function" "dataflow_trigger" {
 
   depends_on = [
     google_project_service.required_apis["cloudfunctions.googleapis.com"],
-    null_resource.cloud_function_package
+    null_resource.cloud_function_package,
+    google_project_iam_member.compute_storage_admin,
+    google_project_iam_member.cloud_function_storage_admin
   ]
+}
+
+# Grant default Compute service account storage access (needed for Cloud Function build)
+resource "google_project_iam_member" "compute_storage_admin" {
+  project = var.gcp_project_id
+  role    = "roles/storage.objectViewer"
+  member  = "serviceAccount:${data.google_project.current.number}-compute@developer.gserviceaccount.com"
+}
+
+# Grant Cloud Function service account storage admin (for runtime)
+resource "google_project_iam_member" "cloud_function_storage_admin" {
+  project = var.gcp_project_id
+  role    = "roles/storage.admin"
+  member  = "serviceAccount:${google_service_account.cloud_function.email}"
 }
 
 # IAM roles for Cloud Function service account - MUST BE SET MANUALLY due to GCP org policy
@@ -388,17 +408,46 @@ resource "local_file" "cloud_function_iam_setup" {
       exit 1
     fi
 
-    echo "Setting up IAM roles for Cloud Function service account..."
+    PROJECT_NUMBER=$(gcloud projects describe "$PROJECT_ID" --format='value(projectNumber)')
+    COMPUTE_SA="$PROJECT_NUMBER-compute@developer.gserviceaccount.com"
+    FUNCTION_SA="cricket-cloud-function-sa@$PROJECT_ID.iam.gserviceaccount.com"
 
+    echo "Setting up IAM roles for Cloud Function..."
+    echo "  Project: $PROJECT_ID"
+    echo "  Project Number: $PROJECT_NUMBER"
+    echo "  Compute SA: $COMPUTE_SA"
+    echo "  Function SA: $FUNCTION_SA"
+    echo ""
+
+    echo "1️⃣  Granting Compute service account Storage Object Viewer (for CF build)..."
     gcloud projects add-iam-policy-binding "$PROJECT_ID" \
-      --member="serviceAccount:cricket-cloud-function-sa@$PROJECT_ID.iam.gserviceaccount.com" \
+      --member="serviceAccount:$COMPUTE_SA" \
+      --role="roles/storage.objectViewer" \
+      --condition=None 2>/dev/null || echo "⚠️  Could not set (org policy may block this). Run manually if needed."
+
+    echo ""
+    echo "2️⃣  Granting Cloud Function service account Storage Admin..."
+    gcloud projects add-iam-policy-binding "$PROJECT_ID" \
+      --member="serviceAccount:$FUNCTION_SA" \
+      --role="roles/storage.admin" \
+      --condition=None 2>/dev/null || echo "⚠️  Could not set (org policy may block this). Run manually if needed."
+
+    echo ""
+    echo "3️⃣  Granting Cloud Function service account Dataflow Admin..."
+    gcloud projects add-iam-policy-binding "$PROJECT_ID" \
+      --member="serviceAccount:$FUNCTION_SA" \
       --role="roles/dataflow.admin" \
-      --condition=None
+      --condition=None 2>/dev/null || echo "⚠️  Could not set (org policy may block this). Run manually if needed."
 
+    echo ""
+    echo "4️⃣  Granting Cloud Function service account Service Account User..."
     gcloud projects add-iam-policy-binding "$PROJECT_ID" \
-      --member="serviceAccount:cricket-cloud-function-sa@$PROJECT_ID.iam.gserviceaccount.com" \
+      --member="serviceAccount:$FUNCTION_SA" \
       --role="roles/iam.serviceAccountUser" \
-      --condition=None
+      --condition=None 2>/dev/null || echo "⚠️  Could not set (org policy may block this). Run manually if needed."
+
+    echo ""
+    echo "✅ IAM setup complete! If any roles failed, contact your GCP org admin."
 
     echo "✅ Cloud Function IAM roles configured"
   EOT

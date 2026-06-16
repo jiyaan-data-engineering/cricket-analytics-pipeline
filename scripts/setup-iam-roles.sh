@@ -55,9 +55,40 @@ gcloud projects add-iam-policy-binding "$PROJECT_ID" \
 
 echo ""
 echo "=================================================="
+echo "⚠️  CLOUD COMPOSER SERVICE ACCOUNT ROLES"
+echo "=================================================="
+echo ""
+
+COMPOSER_SA="cricket-composer-sa@$PROJECT_ID.iam.gserviceaccount.com"
+
+echo "6️⃣  Granting roles/logging.logWriter to Cloud Composer SA..."
+gcloud projects add-iam-policy-binding "$PROJECT_ID" \
+  --member="serviceAccount:$COMPOSER_SA" \
+  --role="roles/logging.logWriter"
+
+echo ""
+echo "7️⃣  Granting roles/bigquery.admin to Cloud Composer SA..."
+gcloud projects add-iam-policy-binding "$PROJECT_ID" \
+  --member="serviceAccount:$COMPOSER_SA" \
+  --role="roles/bigquery.admin"
+
+echo ""
+echo "8️⃣  Granting roles/storage.admin to Cloud Composer SA..."
+gcloud projects add-iam-policy-binding "$PROJECT_ID" \
+  --member="serviceAccount:$COMPOSER_SA" \
+  --role="roles/storage.admin"
+
+echo ""
+echo "9️⃣  Granting roles/dataflow.admin to Cloud Composer SA..."
+gcloud projects add-iam-policy-binding "$PROJECT_ID" \
+  --member="serviceAccount:$COMPOSER_SA" \
+  --role="roles/dataflow.admin"
+
+echo ""
+echo "=================================================="
 echo "✅ IAM roles configured successfully!"
 echo "=================================================="
 echo ""
-echo "Cloud Function is now ready for FULL automation."
-echo "All future deployments will include automatic Cloud Function setup."
+echo "Cloud Function and Cloud Composer are now ready for FULL automation."
+echo "All future deployments will include automatic setup."
 echo ""

@@ -24,7 +24,6 @@ gcloud composer environments create $ENVIRONMENT_NAME \
   --project=$PROJECT_ID \
   --location=$REGION \
   --node-count=3 \
-  --machine-type=n1-standard-4 \
   --env-variables=\
 GCP_PROJECT_ID=$PROJECT_ID,\
 GCP_REGION=$REGION,\

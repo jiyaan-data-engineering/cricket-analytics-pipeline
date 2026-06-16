@@ -10,6 +10,7 @@ set -e
 PROJECT_ID="${1:-cricket-analytics-prod}"
 REGION="${2:-us-central1}"
 ENVIRONMENT_NAME="cricket-analytics-composer"
+SERVICE_ACCOUNT="cricket-composer-sa@${PROJECT_ID}.iam.gserviceaccount.com"
 
 echo "🚀 Deploying Cloud Composer Environment..."
 echo "Project: $PROJECT_ID"
@@ -23,6 +24,7 @@ echo "⏳ Creating Cloud Composer environment (this takes 10-15 minutes)..."
 gcloud composer environments create $ENVIRONMENT_NAME \
   --project=$PROJECT_ID \
   --location=$REGION \
+  --service-account=$SERVICE_ACCOUNT \
   --env-variables=\
 GCP_PROJECT_ID=$PROJECT_ID,\
 GCP_REGION=$REGION,\

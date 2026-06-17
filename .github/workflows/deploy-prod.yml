@@ -337,6 +337,16 @@ jobs:
           chmod +x scripts/setup-iam-roles.sh
           ./scripts/setup-iam-roles.sh "$PROJECT_ID" || echo "⚠️ IAM setup completed (may require org admin approval)"
 
+      - name: 📬 Create Pub/Sub Topic
+        run: |
+          echo "Creating Pub/Sub topic for Cloud Scheduler..."
+          PROJECT_ID="${{ secrets.PROD_GCP_PROJECT_ID }}"
+
+          gcloud pubsub topics create cricket-pipeline \
+            --project "$PROJECT_ID" 2>/dev/null || echo "Topic already exists"
+
+          echo "✅ Pub/Sub topic ready"
+
       - name: 🐍 Deploy Cloud Functions
         run: |
           echo "Deploying auto_orchestrator Cloud Function..."
@@ -361,10 +371,6 @@ jobs:
         run: |
           echo "Setting up Cloud Scheduler for daily pipeline runs..."
           PROJECT_ID="${{ secrets.PROD_GCP_PROJECT_ID }}"
-
-          # Create Pub/Sub topic if doesn't exist
-          gcloud pubsub topics create cricket-pipeline \
-            --project "$PROJECT_ID" 2>/dev/null || echo "Topic already exists"
 
           # Create Cloud Scheduler job (daily at 05:00 UTC)
           gcloud scheduler jobs create pubsub auto-pipeline \

@@ -363,15 +363,6 @@ jobs:
           echo ""
           echo "=================================================="
 
-      - name: ☁️ Deploy Cloud Composer
-        run: |
-          echo "☁️  Deploying Cloud Composer environment..."
-          echo ""
-          chmod +x scripts/deploy-composer.sh
-          scripts/deploy-composer.sh ${{ secrets.PROD_GCP_PROJECT_ID }} us-central1
-          echo ""
-          echo "✅ Cloud Composer deployed successfully"
-
       - name: 📊 Verify Deployment
         run: |
           echo "=========================================="

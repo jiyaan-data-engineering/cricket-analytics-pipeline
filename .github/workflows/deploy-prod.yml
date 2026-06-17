@@ -351,7 +351,7 @@ jobs:
             --region us-central1 \
             --project "$PROJECT_ID" \
             --memory 512MB \
-            --timeout 3600 \
+            --timeout 540 \
             --set-env-vars GCP_PROJECT_ID="$PROJECT_ID",GCP_REGION=us-central1 \
             --quiet
 

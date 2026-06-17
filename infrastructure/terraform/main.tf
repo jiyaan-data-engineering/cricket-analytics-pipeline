@@ -50,88 +50,23 @@ resource "google_project_service" "required_apis" {
 # CREATE SERVICE ACCOUNTS
 # ============================================================================
 
-# Already created manually - commented out to avoid conflicts
-# resource "google_service_account" "dataflow" {
-#   account_id   = "cricket-dataflow-sa"
-#   display_name = "Cricket Analytics Dataflow Service Account"
-# }
-
 resource "google_service_account" "cloud_function" {
   account_id   = "cricket-cloud-function-sa"
-  display_name = "Cricket Analytics Cloud Function Service Account"
+  display_name = "Cloud Function Service Account"
 }
 
 resource "google_service_account" "cloud_run" {
   account_id   = "cricket-cloud-run-sa"
-  display_name = "Cricket Analytics Cloud Run Service Account"
+  display_name = "Cloud Run Service Account"
 }
 
 resource "google_service_account" "cloud_composer" {
   account_id   = "cricket-composer-sa"
-  display_name = "Cricket Analytics Cloud Composer Service Account"
+  display_name = "Cloud Composer Service Account"
 }
 
-# ============================================================================
-# GRANT IAM ROLES TO SERVICE ACCOUNTS
-# ============================================================================
-
-# Dataflow SA roles - commented out as dataflow SA is manually created
-# resource "google_project_iam_member" "dataflow_bigquery_admin" {
-#   project = var.gcp_project_id
-#   role    = "roles/bigquery.admin"
-#   member  = "serviceAccount:${google_service_account.dataflow.email}"
-# }
-#
-# resource "google_project_iam_member" "dataflow_storage_admin" {
-#   project = var.gcp_project_id
-#   role    = "roles/storage.admin"
-#   member  = "serviceAccount:${google_service_account.dataflow.email}"
-# }
-#
-# resource "google_project_iam_member" "dataflow_admin" {
-#   project = var.gcp_project_id
-#   role    = "roles/dataflow.admin"
-#   member  = "serviceAccount:${google_service_account.dataflow.email}"
-# }
-#
-# resource "google_project_iam_member" "dataflow_worker" {
-#   project = var.gcp_project_id
-#   role    = "roles/dataflow.worker"
-#   member  = "serviceAccount:${google_service_account.dataflow.email}"
-# }
-
-# Cloud Function SA roles
-# IAM roles set manually - commented out to avoid service account permission issues
-# resource "google_project_iam_member" "cf_dataflow_admin" {
-#   project = var.gcp_project_id
-#   role    = "roles/dataflow.admin"
-#   member  = "serviceAccount:${google_service_account.cloud_function.email}"
-# }
-#
-# resource "google_project_iam_member" "cf_service_account_user" {
-#   project = var.gcp_project_id
-#   role    = "roles/iam.serviceAccountUser"
-#   member  = "serviceAccount:${google_service_account.cloud_function.email}"
-# }
-#
-# # Cloud Composer SA roles
-# resource "google_project_iam_member" "composer_bigquery_admin" {
-#   project = var.gcp_project_id
-#   role    = "roles/bigquery.admin"
-#   member  = "serviceAccount:${google_service_account.cloud_composer.email}"
-# }
-#
-# resource "google_project_iam_member" "composer_storage_admin" {
-#   project = var.gcp_project_id
-#   role    = "roles/storage.admin"
-#   member  = "serviceAccount:${google_service_account.cloud_composer.email}"
-# }
-#
-# resource "google_project_iam_member" "composer_dataflow_admin" {
-#   project = var.gcp_project_id
-#   role    = "roles/dataflow.admin"
-#   member  = "serviceAccount:${google_service_account.cloud_composer.email}"
-# }
+# Note: IAM roles must be set manually via setup-iam-roles.sh script
+# This is due to GCP org policy restrictions on programmatic IAM changes
 
 # ============================================================================
 # CREATE GCS BUCKETS
@@ -175,20 +110,6 @@ resource "google_storage_bucket" "temp" {
     enabled = false
   }
 }
-
-# Already created manually - commented out to avoid conflicts
-# resource "google_storage_bucket" "tf_state" {
-#   name          = "cricket-tf-state-prod"
-#   location      = var.gcp_region
-#   project       = var.gcp_project_id
-#   force_destroy = false
-#
-#   uniform_bucket_level_access = true
-#
-#   versioning {
-#     enabled = true
-#   }
-# }
 
 # ============================================================================
 # CREATE BIGQUERY DATASETS

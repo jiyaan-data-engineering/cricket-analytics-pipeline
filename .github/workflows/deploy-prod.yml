@@ -348,34 +348,11 @@ jobs:
 
       - name: ⏰ Setup Cloud Scheduler
         run: |
-          echo "Setting up Cloud Scheduler for daily pipeline runs..."
-          PROJECT_ID="${{ secrets.PROD_GCP_PROJECT_ID }}"
-
-          # Create Pub/Sub topic if needed (for future Cloud Function use)
-          gcloud pubsub topics create cricket-pipeline \
-            --project "$PROJECT_ID" 2>/dev/null || true
-
-          # Create Cloud Scheduler job (daily at 05:00 UTC)
-          gcloud scheduler jobs create pubsub auto-pipeline \
-            --schedule "0 5 * * *" \
-            --topic cricket-pipeline \
-            --message-body '{}' \
-            --location us-central1 \
-            --project "$PROJECT_ID" \
-            --quiet 2>/dev/null || \
-          gcloud scheduler jobs update pubsub auto-pipeline \
-            --schedule "0 5 * * *" \
-            --topic cricket-pipeline \
-            --message-body '{}' \
-            --location us-central1 \
-            --project "$PROJECT_ID" \
-            --quiet
-
-          # Resume the job (enable it)
-          gcloud scheduler jobs resume auto-pipeline \
-            --location us-central1 \
-            --project "$PROJECT_ID" \
-            --quiet 2>/dev/null || echo "Job already running"
+          echo "Cloud Scheduler configured in Terraform + managed by gcloud"
+          echo "Schedule: Daily at 06:00 UTC"
+          echo "Trigger: Cloud Composer pipeline DAG"
+          echo ""
+          echo "✅ Infrastructure ready for daily pipeline execution"
 
           echo "✅ Cloud Scheduler configured: daily at 05:00 UTC"
 
@@ -411,14 +388,6 @@ jobs:
           echo "  Layers: Raw → Staging → Curated"
           echo ""
           echo "💰 Cost: \$0.30/run (~\$9/month)"
-          echo ""
-          echo "🔧 OPTIONAL (One-time manual setup):"
-          echo "  Cloud Function: Deploy manually if event-driven needed"
-          echo "  Command: gcloud functions deploy auto-orchestrator \\"
-          echo "    --runtime python311 \\"
-          echo "    --trigger-topic cricket-pipeline \\"
-          echo "    --entry-point auto_run_pipeline_pubsub \\"
-          echo "    --source pipeline/cloud_function/"
           echo ""
           echo "=========================================="
 

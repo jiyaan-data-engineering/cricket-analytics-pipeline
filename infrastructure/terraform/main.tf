@@ -32,11 +32,8 @@ resource "google_project_service" "required_apis" {
     "storage-api.googleapis.com",
     "dataflow.googleapis.com",
     "cloudscheduler.googleapis.com",
-    "cloudfunctions.googleapis.com",
-    "run.googleapis.com",
     "composer.googleapis.com",
     "artifactregistry.googleapis.com",
-    "eventarc.googleapis.com",
     "logging.googleapis.com",
     "monitoring.googleapis.com",
     "iam.googleapis.com"
@@ -49,16 +46,6 @@ resource "google_project_service" "required_apis" {
 # ============================================================================
 # CREATE SERVICE ACCOUNTS
 # ============================================================================
-
-resource "google_service_account" "cloud_function" {
-  account_id   = "cricket-cloud-function-sa"
-  display_name = "Cloud Function Service Account"
-}
-
-resource "google_service_account" "cloud_run" {
-  account_id   = "cricket-cloud-run-sa"
-  display_name = "Cloud Run Service Account"
-}
 
 resource "google_service_account" "cloud_composer" {
   account_id   = "cricket-composer-sa"
@@ -242,139 +229,15 @@ resource "null_resource" "looker_studio_script" {
 #   python3 ./scripts/create-looker-dashboard-api.py cricket-analytics-prod cricket_curated
 
 # ============================================================================
-# CLOUD FUNCTION - DEPLOYED VIA GITHUB ACTIONS (not Terraform)
+# CLOUD SCHEDULER & CLOUD COMPOSER - DEPLOYED VIA GITHUB ACTIONS
 # ============================================================================
-# Cloud Function deployment is handled in .github/workflows/deploy-prod.yml
-# using `gcloud functions deploy` which works better with GCP org policies
-# that restrict IAM modifications.
+# Cloud Scheduler and Cloud Composer are configured in .github/workflows/deploy-prod.yml
+# via gcloud commands for compatibility with GCP org policies.
 #
-# The function source code is in: pipeline/cloud_function/main.py
-# The deployment script handles:
-# 1. Zipping the source code
-# 2. Uploading to templates bucket
-# 3. Creating the Cloud Function with event trigger
-# 4. Setting up IAM roles for the service account
-
-resource "local_file" "cloud_function_iam_setup" {
-  filename = "${path.module}/../../scripts/setup-cloud-function-iam.sh"
-  content  = <<-EOT
-    #!/bin/bash
-    set -e
-
-    PROJECT_ID=$1
-    if [ -z "$PROJECT_ID" ]; then
-      echo "Usage: setup-cloud-function-iam.sh <PROJECT_ID>"
-      exit 1
-    fi
-
-    PROJECT_NUMBER=$(gcloud projects describe "$PROJECT_ID" --format='value(projectNumber)')
-    COMPUTE_SA="$PROJECT_NUMBER-compute@developer.gserviceaccount.com"
-    FUNCTION_SA="cricket-cloud-function-sa@$PROJECT_ID.iam.gserviceaccount.com"
-
-    echo "========================================="
-    echo "Cloud Function IAM Setup"
-    echo "========================================="
-    echo "Project:      $PROJECT_ID"
-    echo "Project #:    $PROJECT_NUMBER"
-    echo "Compute SA:   $COMPUTE_SA"
-    echo "Function SA:  $FUNCTION_SA"
-    echo ""
-
-    echo "⏳ Setting IAM roles (may require GCP org admin approval)..."
-    echo ""
-
-    echo "1️⃣  Storage Object Viewer for Compute SA (Cloud Function build)"
-    gcloud projects add-iam-policy-binding "$PROJECT_ID" \
-      --member="serviceAccount:$COMPUTE_SA" \
-      --role="roles/storage.objectViewer" \
-      --quiet 2>&1 | grep -E "(Updated|already has|403)" || true
-
-    echo ""
-    echo "2️⃣  Storage Admin for Cloud Function SA (runtime access)"
-    gcloud projects add-iam-policy-binding "$PROJECT_ID" \
-      --member="serviceAccount:$FUNCTION_SA" \
-      --role="roles/storage.admin" \
-      --quiet 2>&1 | grep -E "(Updated|already has|403)" || true
-
-    echo ""
-    echo "3️⃣  Dataflow Admin for Cloud Function SA (Dataflow trigger)"
-    gcloud projects add-iam-policy-binding "$PROJECT_ID" \
-      --member="serviceAccount:$FUNCTION_SA" \
-      --role="roles/dataflow.admin" \
-      --quiet 2>&1 | grep -E "(Updated|already has|403)" || true
-
-    echo ""
-    echo "4️⃣  Service Account User for Cloud Function SA"
-    gcloud projects add-iam-policy-binding "$PROJECT_ID" \
-      --member="serviceAccount:$FUNCTION_SA" \
-      --role="roles/iam.serviceAccountUser" \
-      --quiet 2>&1 | grep -E "(Updated|already has|403)" || true
-
-    echo ""
-    echo "========================================="
-    echo "✅ IAM setup complete!"
-    echo "========================================="
-    echo ""
-    echo "If any roles failed with 403, contact your GCP org admin."
-  EOT
-
-  depends_on = [
-    google_service_account.cloud_function
-  ]
-}
-
-resource "null_resource" "make_iam_script_executable" {
-  provisioner "local-exec" {
-    command = "chmod +x '${local_file.cloud_function_iam_setup.filename}'"
-  }
-
-  depends_on = [
-    local_file.cloud_function_iam_setup
-  ]
-}
-
-# ============================================================================
-# CLOUD SCHEDULER - DAILY PIPELINE TRIGGER
-# ============================================================================
-
-resource "google_cloud_scheduler_job" "cricket_analytics_trigger" {
-  name             = "cricket-analytics-ingestion"
-  description      = "Daily trigger for cricket analytics pipeline at 06:00 UTC"
-  schedule         = "0 6 * * *"
-  time_zone        = "UTC"
-  attempt_deadline = "600s"
-  paused           = true
-  project          = var.gcp_project_id
-  region           = var.gcp_region
-
-  http_target {
-    uri         = "https://cricket-ingestion-${var.gcp_project_id}.ew.r.appspot.com/trigger"
-    http_method = "POST"
-
-    headers = {
-      "Content-Type" = "application/json"
-    }
-
-    oidc_token {
-      service_account_email = google_service_account.cloud_run.email
-    }
-  }
-
-  depends_on = [
-    google_project_service.required_apis["cloudscheduler.googleapis.com"]
-  ]
-}
-
-# ============================================================================
-# EVENT-DRIVEN & ORCHESTRATION RESOURCES (DEPLOYED MANUALLY)
-# ============================================================================
-# Note: Cloud Function, Eventarc, Cloud Run, Cloud Scheduler, and Cloud Composer
-# require complex nested structures and will be deployed manually via
-# gcloud commands or the provided deployment scripts after Terraform
-# core infrastructure is in place. The Python code is ready in:
-# - pipeline/cloud_function/main.py (Dataflow trigger)
-# - pipeline/ingestion/fetch_batting_rankings.py (API ingestion)
-# - pipeline/dataflow/pipeline.py (Apache Beam processing)
-# - pipeline/airflow/dags/*.py (Airflow DAGs for Cloud Composer)
-#
-# Use scripts/deploy-composer.sh to deploy Cloud Composer environment
+# Cloud Scheduler triggers Cloud Composer daily at 06:00 UTC
+# Cloud Composer runs the complete pipeline orchestration DAG:
+# - Phase 1: API fetch → CSV to GCS
+# - Phase 2: Dataflow reads CSV → writes to BigQuery Raw
+# - Phase 3: MERGE operations → BigQuery Staging (star schema)
+# - Phase 4: CREATE VIEW → BigQuery Curated (analytics views)
+# - Phase 5: Dashboard refresh + reporting

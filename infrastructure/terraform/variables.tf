@@ -1,5 +1,5 @@
 # ============================================================================
-# CRICKET ANALYTICS PIPELINE - PRODUCTION VARIABLES
+# TERRAFORM VARIABLES
 # ============================================================================
 
 variable "gcp_project_id" {
@@ -14,14 +14,8 @@ variable "gcp_region" {
   default     = "us-central1"
 }
 
-variable "backup_enabled" {
-  description = "Enable backups for production"
-  type        = bool
-  default     = false
-}
-
-variable "monitoring_enabled" {
-  description = "Enable monitoring for production"
-  type        = bool
-  default     = false
+variable "environment" {
+  description = "Environment (dev, staging, prod)"
+  type        = string
+  default     = "prod"
 }

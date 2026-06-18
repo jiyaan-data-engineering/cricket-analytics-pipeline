@@ -20,7 +20,7 @@ from google.cloud import bigquery
 
 logger = logging.getLogger(__name__)
 
-PROJECT_ID = Variable.get("gcp_project_id", default_var="cricket-analytics-project")
+PROJECT_ID = Variable.get("gcp_project_id", default_var="cricket-analytics-prod")
 GCP_REGION = Variable.get("gcp_region", default_var="us-central1")
 
 default_args = {

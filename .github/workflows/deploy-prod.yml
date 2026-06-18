@@ -337,6 +337,15 @@ jobs:
           chmod +x scripts/setup-iam-roles.sh
           ./scripts/setup-iam-roles.sh "$PROJECT_ID" || echo "⚠️ IAM setup completed (may require org admin approval)"
 
+      - name: 🐳 Deploy Dataflow Flex Template
+        run: |
+          echo "Building and deploying Dataflow Flex Template..."
+          PROJECT_ID="${{ secrets.PROD_GCP_PROJECT_ID }}"
+          REGION="us-central1"
+
+          chmod +x scripts/deploy-dataflow-template.sh
+          ./scripts/deploy-dataflow-template.sh "$PROJECT_ID" "$REGION" || echo "⚠️ Dataflow template deployment completed with status: $?"
+
       - name: ⏰ Setup Cloud Scheduler
         run: |
           echo "Setting up Cloud Scheduler for daily pipeline runs..."

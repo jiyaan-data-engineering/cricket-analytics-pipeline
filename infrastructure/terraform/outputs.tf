@@ -71,15 +71,9 @@ output "audit_logs_dataset" {
 #   description = "Dataflow service account email"
 # }
 
-output "cloud_function_service_account" {
-  value       = google_service_account.cloud_function.email
-  description = "Cloud Function service account email"
-}
-
-output "cloud_run_service_account" {
-  value       = google_service_account.cloud_run.email
-  description = "Cloud Run service account email"
-}
+# Cloud Function and Cloud Run deployed via GitHub Actions (not Terraform)
+# Removed: cloud_function_service_account
+# Removed: cloud_run_service_account
 
 output "cloud_composer_service_account" {
   value       = google_service_account.cloud_composer.email
@@ -122,15 +116,8 @@ output "cloud_function_next_steps" {
 # CLOUD SCHEDULER - DAILY PIPELINE TRIGGER
 # ============================================================================
 
-output "cloud_scheduler_job_name" {
-  value       = google_cloud_scheduler_job.cricket_analytics_trigger.name
-  description = "Cloud Scheduler job name"
-}
-
-output "cloud_scheduler_schedule" {
-  value       = google_cloud_scheduler_job.cricket_analytics_trigger.schedule
-  description = "Cloud Scheduler cron expression (0 6 * * * = daily at 06:00 UTC)"
-}
+# Cloud Scheduler deployed via GitHub Actions (not Terraform)
+# Outputs removed - see GitHub Actions workflow for deployment details
 
 output "cloud_scheduler_next_steps" {
   value       = <<-EOT

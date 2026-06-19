@@ -1,141 +1,45 @@
 # ============================================================================
-# Terraform Variables File - Cricket Analytics Pipeline
-# Copy this to terraform.tfvars and update with your values
+# TERRAFORM CONFIGURATION VALUES
 # ============================================================================
+# This file contains all configuration values. Update these values to match
+# your environment before deployment.
 
-# ============================================================================
-# GCP PROJECT CONFIGURATION
-# ============================================================================
-
-gcp_project_id = "cricket-analytics-dev"
+# GCP Configuration
+gcp_project_id = "cricket-analytics-prod"
 gcp_region     = "us-central1"
-gcp_zone       = "us-central1-a"
-environment    = "dev"
+environment    = "prod"
 
-# ============================================================================
-# GCS BUCKET NAMES - Configure Here
-# ============================================================================
+# GCS Bucket Names
+raw_data_bucket_name              = "cricket-raw-data-prod"
+dataflow_templates_bucket_name    = "cricket-dataflow-templates-prod"
+dataflow_temp_bucket_name         = "cricket-dataflow-temp-prod"
 
-gcs_raw_bucket_name       = "cricket-analytics-raw-data"
-gcs_templates_bucket_name = "cricket-analytics-dataflow-templates"
-gcs_temp_bucket_name      = "cricket-analytics-dataflow-temp"
-gcs_raw_prefix            = "batting/"
+# BigQuery Dataset Names
+raw_dataset_name     = "cricket_raw"
+staging_dataset_name = "cricket_staging"
+curated_dataset_name = "cricket_curated"
+audit_logs_dataset_name = "cricket_audit_logs"
 
-# ============================================================================
-# BIGQUERY DATASET & TABLE NAMES - Configure Here
-# ============================================================================
+# Service Account
+composer_service_account_id = "cricket-composer-sa"
 
-bq_raw_dataset         = "cricket_raw"
-bq_staging_dataset     = "cricket_staging"
-bq_curated_dataset     = "cricket_curated"
-bq_raw_table_name      = "batting_rankings"
-bq_table_expiration_days = 90
+# Cloud Composer
+composer_env_name   = "cricket-analytics-composer"
+composer_node_count = 3
+composer_machine_type = "n1-standard-4"
 
-# ============================================================================
-# BIGQUERY TABLE NAMES - Configure Here (defaults from config.yaml)
-# ============================================================================
+# DAG Configuration
+dag_schedule = "0 6 * * *"  # Daily at 06:00 UTC
 
-bq_raw_table_batting_rankings        = "batting_rankings"
-bq_staging_table_dim_player          = "dim_player"
-bq_staging_table_dim_country         = "dim_country"
-bq_staging_table_dim_format          = "dim_format"
-bq_staging_table_dim_date            = "dim_date"
-bq_staging_table_fact_batting        = "fact_batting_rankings"
+# Dataflow Configuration
+dataflow_worker_count_min    = 2
+dataflow_worker_count_max    = 5
+dataflow_worker_machine_type = "n1-standard-2"
 
-# ============================================================================
-# BIGQUERY VIEW NAMES - Configure Here (defaults from config.yaml)
-# ============================================================================
-
-bq_raw_view_latest_raw                           = "vw_latest_raw"
-bq_curated_view_batting_rankings_latest          = "vw_batting_rankings_latest"
-bq_curated_view_batting_rankings_90day_trend     = "vw_batting_rankings_90day_trend"
-bq_curated_view_top_10_batsmen_by_format         = "vw_top_10_batsmen_by_format"
-bq_curated_view_batting_statistics_by_country    = "vw_batting_statistics_by_country"
-bq_curated_view_ranking_comparison_cross_format  = "vw_ranking_comparison_cross_format"
-
-# ============================================================================
-# BIGQUERY CLUSTERING CONFIGURATION - Configure Here
-# ============================================================================
-
-bq_raw_clustering_fields  = ["format", "country"]
-bq_fact_clustering_fields = ["format_id", "country_id"]
-
-# ============================================================================
-# CLOUD FUNCTION NAMES & CONFIG
-# ============================================================================
-
-cloud_function_name         = "cricket-gcs-dataflow-trigger"
-cloud_function_runtime      = "python311"
-cloud_function_timeout      = 600
-cloud_function_memory       = 512
-cloud_function_max_instances = 10
-
-# ============================================================================
-# DATAFLOW PIPELINE NAMES & CONFIG
-# ============================================================================
-
-dataflow_pipeline_name      = "cricket-batting-rankings-pipeline"
-dataflow_machine_type       = "n1-standard-2"
-dataflow_num_workers        = 2
-dataflow_max_workers        = 5
-dataflow_template_location  = "gs://cricket-analytics-dataflow-templates/batting-pipeline/metadata"
-
-# ============================================================================
-# CLOUD SCHEDULER NAMES & CONFIG
-# ============================================================================
-
-cloud_scheduler_job_name    = "cricket-daily-ingestion"
-cloud_scheduler_schedule    = "0 6 * * *"  # Daily at 06:00 UTC
-cloud_scheduler_timezone    = "UTC"
-cloud_scheduler_description = "Daily cricket rankings ingestion trigger"
-
-# ============================================================================
-# CLOUD COMPOSER (AIRFLOW) NAMES & CONFIG
-# ============================================================================
-
-cloud_composer_name            = "cricket-analytics-composer"
-cloud_composer_machine_type    = "n1-standard-4"
-cloud_composer_node_count      = 3
-cloud_composer_disk_size       = 30
-cloud_composer_airflow_version = "2.7.3"
-enable_cloud_composer          = true
-
-# ============================================================================
-# ARTIFACT REGISTRY NAMES
-# ============================================================================
-
-artifact_registry_name   = "cricket-docker"
-artifact_registry_format = "DOCKER"
-
-# ============================================================================
-# SERVICE ACCOUNT NAMES
-# ============================================================================
-
-dataflow_sa_name         = "cricket-dataflow-sa"
-cloud_function_sa_name   = "cricket-cloud-function-sa"
-cloud_composer_sa_name   = "cricket-composer-sa"
-
-# ============================================================================
-# MONITORING & LOGGING
-# ============================================================================
-
-enable_monitoring    = true
-alert_policy_name    = "cricket-dag-failure-alert"
-log_sink_name        = "cricket-analytics-logs"
-
-# ============================================================================
-# API KEYS & SECRETS
-# ============================================================================
-
-rapidapi_key = "YOUR_RAPIDAPI_KEY_HERE"  # Replace with your actual key
-
-# ============================================================================
-# TAGS & LABELS
-# ============================================================================
-
-labels = {
+# Tags and Labels
+common_labels = {
   project     = "cricket-analytics"
-  environment = "dev"
   managed_by  = "terraform"
-  team        = "data-engineering"
+  environment = "prod"
+  created_at  = "2026-06-19"
 }

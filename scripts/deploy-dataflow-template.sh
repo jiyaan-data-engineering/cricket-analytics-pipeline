@@ -2,13 +2,24 @@
 set -e
 
 # Deploy Dataflow Flex Template
-# This script builds and registers the Dataflow template to GCS
+# Usage: ./deploy-dataflow-template.sh <PROJECT_ID> <REGION> <BUCKET_NAME> <ARTIFACT_REPO> <IMAGE_NAME>
 
-PROJECT_ID="${1:-cricket-analytics-prod}"
-REGION="${2:-us-central1}"
-ARTIFACT_REPO="cricket-dataflow"
-IMAGE_NAME="batting-pipeline"
-TEMPLATE_LOCATION="gs://${PROJECT_ID}-dataflow-templates-prod/batting-pipeline"
+if [ $# -lt 5 ]; then
+    echo "❌ Error: Missing required parameters"
+    echo ""
+    echo "Usage: $0 <PROJECT_ID> <REGION> <TEMPLATE_BUCKET> <ARTIFACT_REPO> <IMAGE_NAME>"
+    echo ""
+    echo "Example:"
+    echo "  $0 cricket-analytics-prod us-central1 cricket-dataflow-templates-prod cricket-dataflow batting-pipeline"
+    exit 1
+fi
+
+PROJECT_ID="$1"
+REGION="$2"
+TEMPLATE_BUCKET="$3"
+ARTIFACT_REPO="$4"
+IMAGE_NAME="$5"
+TEMPLATE_LOCATION="gs://${TEMPLATE_BUCKET}/batting-pipeline"
 
 echo "=================================================="
 echo "DEPLOYING DATAFLOW FLEX TEMPLATE"

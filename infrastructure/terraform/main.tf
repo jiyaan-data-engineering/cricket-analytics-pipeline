@@ -48,7 +48,7 @@ resource "google_project_service" "required_apis" {
 # ============================================================================
 
 resource "google_service_account" "cloud_composer" {
-  account_id   = "cricket-composer-sa"
+  account_id   = var.composer_service_account_id
   display_name = "Cloud Composer Service Account"
 }
 
@@ -60,7 +60,7 @@ resource "google_service_account" "cloud_composer" {
 # ============================================================================
 
 resource "google_storage_bucket" "raw_data" {
-  name          = "cricket-raw-data-prod"
+  name          = var.raw_data_bucket_name
   location      = var.gcp_region
   project       = var.gcp_project_id
   force_destroy = false
@@ -73,7 +73,7 @@ resource "google_storage_bucket" "raw_data" {
 }
 
 resource "google_storage_bucket" "templates" {
-  name          = "cricket-dataflow-templates-prod"
+  name          = var.dataflow_templates_bucket_name
   location      = var.gcp_region
   project       = var.gcp_project_id
   force_destroy = false
@@ -86,7 +86,7 @@ resource "google_storage_bucket" "templates" {
 }
 
 resource "google_storage_bucket" "temp" {
-  name          = "cricket-dataflow-temp-prod"
+  name          = var.dataflow_temp_bucket_name
   location      = var.gcp_region
   project       = var.gcp_project_id
   force_destroy = false
@@ -103,7 +103,7 @@ resource "google_storage_bucket" "temp" {
 # ============================================================================
 
 resource "google_bigquery_dataset" "raw" {
-  dataset_id    = "cricket_raw"
+  dataset_id    = var.raw_dataset_name
   friendly_name = "Cricket Raw Data"
   description   = "Raw data ingestion layer"
   location      = var.gcp_region
@@ -111,7 +111,7 @@ resource "google_bigquery_dataset" "raw" {
 }
 
 resource "google_bigquery_dataset" "staging" {
-  dataset_id    = "cricket_staging"
+  dataset_id    = var.staging_dataset_name
   friendly_name = "Cricket Staging"
   description   = "Staging/transformed data layer"
   location      = var.gcp_region
@@ -119,7 +119,7 @@ resource "google_bigquery_dataset" "staging" {
 }
 
 resource "google_bigquery_dataset" "curated" {
-  dataset_id    = "cricket_curated"
+  dataset_id    = var.curated_dataset_name
   friendly_name = "Cricket Curated"
   description   = "Curated/analytics-ready data"
   location      = var.gcp_region
@@ -127,7 +127,7 @@ resource "google_bigquery_dataset" "curated" {
 }
 
 resource "google_bigquery_dataset" "audit_logs" {
-  dataset_id    = "cricket_audit_logs"
+  dataset_id    = var.audit_logs_dataset_name
   friendly_name = "Cricket Audit Logs"
   description   = "Pipeline audit and monitoring logs"
   location      = var.gcp_region

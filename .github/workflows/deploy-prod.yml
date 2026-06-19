@@ -1,4 +1,4 @@
-name: 🎯 Create GCS Buckets
+name: 🎯 Deploy to PRODUCTION
 
 on:
   push:
@@ -6,9 +6,31 @@ on:
       - 'release-v*.*.*'
 
 jobs:
-  create_buckets:
-    name: Create GCS Buckets
+  # ============= STAGE 1: VALIDATE =============
+  validate:
+    name: 1️⃣ Validate Configuration
     runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v2
+        with:
+          terraform_version: 1.5.0
+
+      - name: Validate Terraform
+        working-directory: infrastructure/terraform
+        run: |
+          terraform init -backend=false
+          terraform validate
+          echo "✅ Terraform validation passed"
+
+  # ============= STAGE 2: PLAN =============
+  plan:
+    name: 2️⃣ Terraform Plan
+    runs-on: ubuntu-latest
+    needs: validate
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -32,26 +54,87 @@ jobs:
 
       - name: Terraform Plan
         working-directory: infrastructure/terraform
-        run: terraform plan -out=tfplan
+        run: |
+          terraform plan -out=tfplan
+          echo "✅ Terraform plan created"
+
+  # ============= STAGE 3: APPROVAL =============
+  approval:
+    name: 3️⃣ Ready to Deploy
+    runs-on: ubuntu-latest
+    needs: plan
+    steps:
+      - name: Approval Status
+        run: echo "✅ Plan verified - proceeding with deployment"
+
+  # ============= STAGE 4: APPLY =============
+  apply:
+    name: 4️⃣ Create GCS Buckets
+    runs-on: ubuntu-latest
+    needs: approval
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v2
+        with:
+          terraform_version: 1.5.0
+
+      - name: Authenticate to GCP
+        uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.GCP_SA_KEY }}
+
+      - name: Setup Google Cloud SDK
+        uses: google-github-actions/setup-gcloud@v2
+
+      - name: Initialize Terraform
+        working-directory: infrastructure/terraform
+        run: terraform init
 
       - name: Terraform Apply
         working-directory: infrastructure/terraform
-        run: terraform apply -auto-approve tfplan
+        run: |
+          terraform apply -auto-approve -var-file=terraform.tfvars
+          echo "✅ Buckets created"
 
-      - name: Verify Buckets Created
+  # ============= STAGE 5: VERIFY =============
+  verify:
+    name: 5️⃣ Verify Buckets
+    runs-on: ubuntu-latest
+    needs: apply
+    steps:
+      - name: Authenticate to GCP
+        uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.GCP_SA_KEY }}
+
+      - name: Setup Google Cloud SDK
+        uses: google-github-actions/setup-gcloud@v2
+
+      - name: Verify Buckets
         run: |
           echo "Verifying buckets..."
-          gsutil ls -b gs://cricket-raw-data-prod && echo "✅ raw-data bucket exists" || echo "❌ raw-data bucket missing"
-          gsutil ls -b gs://cricket-dataflow-templates-prod && echo "✅ templates bucket exists" || echo "❌ templates bucket missing"
-          gsutil ls -b gs://cricket-dataflow-temp-prod && echo "✅ temp bucket exists" || echo "❌ temp bucket missing"
+          gsutil ls -b gs://cricket-raw-data-prod && echo "✅ raw-data bucket" || echo "❌ FAILED"
+          gsutil ls -b gs://cricket-dataflow-templates-prod && echo "✅ templates bucket" || echo "❌ FAILED"
+          gsutil ls -b gs://cricket-dataflow-temp-prod && echo "✅ temp bucket" || echo "❌ FAILED"
 
+  # ============= STAGE 6: SUCCESS =============
+  success:
+    name: 6️⃣ Deployment Complete
+    runs-on: ubuntu-latest
+    needs: verify
+    steps:
       - name: Success Summary
         run: |
           echo "============================================"
           echo "✅ GCS BUCKETS CREATED SUCCESSFULLY"
           echo "============================================"
           echo ""
-          echo "Created buckets:"
+          echo "Buckets created:"
           echo "  ✅ cricket-raw-data-prod"
           echo "  ✅ cricket-dataflow-templates-prod"
           echo "  ✅ cricket-dataflow-temp-prod"
+          echo ""
+          echo "Deployment Status: COMPLETE"

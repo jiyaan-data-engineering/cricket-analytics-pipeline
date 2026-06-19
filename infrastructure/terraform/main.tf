@@ -25,18 +25,19 @@ provider "google" {
 # ============================================================================
 # ENABLE REQUIRED APIs
 # ============================================================================
+# TODO: Enable additional APIs when needed (BigQuery, Dataflow, Composer, etc)
 
 resource "google_project_service" "required_apis" {
   for_each = toset([
-    "bigquery.googleapis.com",
+    # "bigquery.googleapis.com",
     "storage-api.googleapis.com",
-    "dataflow.googleapis.com",
-    "cloudscheduler.googleapis.com",
-    "composer.googleapis.com",
-    "artifactregistry.googleapis.com",
-    "logging.googleapis.com",
-    "monitoring.googleapis.com",
-    "iam.googleapis.com"
+    # "dataflow.googleapis.com",
+    # "cloudscheduler.googleapis.com",
+    # "composer.googleapis.com",
+    # "artifactregistry.googleapis.com",
+    # "logging.googleapis.com",
+    # "monitoring.googleapis.com",
+    # "iam.googleapis.com"
   ])
 
   service            = each.value
@@ -46,11 +47,12 @@ resource "google_project_service" "required_apis" {
 # ============================================================================
 # CREATE SERVICE ACCOUNTS
 # ============================================================================
+# TODO: Uncomment when ready to deploy Cloud Composer
 
-resource "google_service_account" "cloud_composer" {
-  account_id   = var.composer_service_account_id
-  display_name = "Cloud Composer Service Account"
-}
+# resource "google_service_account" "cloud_composer" {
+#   account_id   = var.composer_service_account_id
+#   display_name = "Cloud Composer Service Account"
+# }
 
 # Note: IAM roles must be set manually via setup-iam-roles.sh script
 # This is due to GCP org policy restrictions on programmatic IAM changes
@@ -101,38 +103,39 @@ resource "google_storage_bucket" "temp" {
 # ============================================================================
 # CREATE BIGQUERY DATASETS
 # ============================================================================
+# TODO: Uncomment when ready to create BigQuery datasets
 
-resource "google_bigquery_dataset" "raw" {
-  dataset_id    = var.raw_dataset_name
-  friendly_name = "Cricket Raw Data"
-  description   = "Raw data ingestion layer"
-  location      = var.gcp_region
-  project       = var.gcp_project_id
-}
-
-resource "google_bigquery_dataset" "staging" {
-  dataset_id    = var.staging_dataset_name
-  friendly_name = "Cricket Staging"
-  description   = "Staging/transformed data layer"
-  location      = var.gcp_region
-  project       = var.gcp_project_id
-}
-
-resource "google_bigquery_dataset" "curated" {
-  dataset_id    = var.curated_dataset_name
-  friendly_name = "Cricket Curated"
-  description   = "Curated/analytics-ready data"
-  location      = var.gcp_region
-  project       = var.gcp_project_id
-}
-
-resource "google_bigquery_dataset" "audit_logs" {
-  dataset_id    = var.audit_logs_dataset_name
-  friendly_name = "Cricket Audit Logs"
-  description   = "Pipeline audit and monitoring logs"
-  location      = var.gcp_region
-  project       = var.gcp_project_id
-}
+# resource "google_bigquery_dataset" "raw" {
+#   dataset_id    = var.raw_dataset_name
+#   friendly_name = "Cricket Raw Data"
+#   description   = "Raw data ingestion layer"
+#   location      = var.gcp_region
+#   project       = var.gcp_project_id
+# }
+#
+# resource "google_bigquery_dataset" "staging" {
+#   dataset_id    = var.staging_dataset_name
+#   friendly_name = "Cricket Staging"
+#   description   = "Staging/transformed data layer"
+#   location      = var.gcp_region
+#   project       = var.gcp_project_id
+# }
+#
+# resource "google_bigquery_dataset" "curated" {
+#   dataset_id    = var.curated_dataset_name
+#   friendly_name = "Cricket Curated"
+#   description   = "Curated/analytics-ready data"
+#   location      = var.gcp_region
+#   project       = var.gcp_project_id
+# }
+#
+# resource "google_bigquery_dataset" "audit_logs" {
+#   dataset_id    = var.audit_logs_dataset_name
+#   friendly_name = "Cricket Audit Logs"
+#   description   = "Pipeline audit and monitoring logs"
+#   location      = var.gcp_region
+#   project       = var.gcp_project_id
+# }
 
 # ============================================================================
 # LOOKER STUDIO DASHBOARD

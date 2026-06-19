@@ -3,7 +3,7 @@ name: 🚀 Deploy to PRODUCTION
 on:
   push:
     tags:
-      - 'release-v[0-9]+.[0-9]+.[0-9]+'  # release-v1.0.0, release-v1.1.0, etc.
+      - 'release-v[0-9]+.[0-9]+.[0-9]+'
 
 permissions:
   id-token: write
@@ -16,7 +16,7 @@ env:
   ENVIRONMENT_SHORT: prod
 
 jobs:
-  # ============= PRE-DEPLOYMENT CHECKS =============
+  # ============= PRE-DEPLOYMENT VALIDATION =============
   pre-deployment:
     name: 🔍 Pre-Deployment Validation
     runs-on: ubuntu-latest
@@ -42,9 +42,9 @@ jobs:
             exit 1
           fi
 
-  # ============= VALIDATION =============
+  # ============= VALIDATE CONFIGURATION =============
   validate:
-    name: 🔍 Validate Configuration
+    name: ✅ Validate Configuration
     runs-on: ubuntu-latest
     needs: pre-deployment
     steps:
@@ -69,8 +69,6 @@ jobs:
     name: 📋 Terraform Plan
     runs-on: ubuntu-latest
     needs: validate
-    outputs:
-      plan_output: ${{ steps.plan.outputs.stdout }}
     steps:
       - name: 📥 Checkout code
         uses: actions/checkout@v4
@@ -163,68 +161,11 @@ jobs:
           echo "📊 Deployment Outputs:"
           terraform output -json | jq .
 
-  # ============= BIGQUERY SETUP =============
-  bigquery-setup:
-    name: 📊 Setup BigQuery
-    runs-on: ubuntu-latest
-    needs: apply
-    steps:
-      - name: 📥 Checkout code
-        uses: actions/checkout@v4
-
-      - name: 🔐 Authenticate to Google Cloud
-        uses: google-github-actions/auth@v2
-        with:
-          credentials_json: ${{ secrets.PROD_GCP_CREDENTIALS_JSON }}
-
-      - name: ☁️ Setup Google Cloud SDK
-        uses: google-github-actions/setup-gcloud@v2
-
-      - name: 📋 Set Project ID
-        run: |
-          gcloud config set project ${{ secrets.PROD_GCP_PROJECT_ID }}
-
-      - name: 🗄️ Execute BigQuery SQL Scripts
-        run: |
-          cd pipeline/bigquery/sql
-
-          echo "🗄️ Executing BigQuery setup scripts for PRODUCTION..."
-
-          SQL_FILES=(
-            "00_create_audit_logs.sql"
-            "raw_batting_rankings.sql"
-            "vw_latest_raw.sql"
-            "dim_player.sql"
-            "dim_country.sql"
-            "dim_format.sql"
-            "dim_date.sql"
-            "fact_batting_rankings.sql"
-            "vw_batting_rankings_latest.sql"
-            "vw_batting_rankings_90day_trend.sql"
-            "vw_top_10_batsmen_by_format.sql"
-            "vw_batting_statistics_by_country.sql"
-            "vw_ranking_comparison_cross_format.sql"
-          )
-
-          for file in "${SQL_FILES[@]}"; do
-            if [ -f "$file" ]; then
-              echo "📄 Executing $file..."
-              sed "s/{PROJECT_ID}/${{ secrets.PROD_GCP_PROJECT_ID }}/g; \
-                   s/{RAW_DATASET}/cricket_raw/g; \
-                   s/{STAGING_DATASET}/cricket_staging/g; \
-                   s/{CURATED_DATASET}/cricket_curated/g; \
-                   s/{AUDIT_DATASET}/cricket_audit_logs/g" "$file" | \
-              bq query --use_legacy_sql=false --location=us-central1 || true
-            fi
-          done
-
-          echo "✅ BigQuery setup completed"
-
   # ============= HEALTH CHECKS =============
   health-checks:
     name: 🏥 Health Checks
     runs-on: ubuntu-latest
-    needs: bigquery-setup
+    needs: apply
     steps:
       - name: 📥 Checkout code
         uses: actions/checkout@v4
@@ -261,11 +202,11 @@ jobs:
           gcloud iam service-accounts list --filter="displayName:cricket" --format="value(email)"
           echo "✅ IAM verified"
 
-  # ============= NOTIFICATION =============
+  # ============= NOTIFY RESULTS =============
   notify:
-    name: 📢 Notify Deployment
+    name: 📢 Notify Results
     runs-on: ubuntu-latest
-    needs: [apply]
+    needs: [health-checks]
     if: always()
     steps:
       - name: ✅ Success Notification
@@ -302,7 +243,7 @@ jobs:
 
   # ============= RELEASE NOTES =============
   release:
-    name: 📝 Create Release Notes
+    name: 📝 Release Notes
     runs-on: ubuntu-latest
     needs: notify
     if: success()
@@ -338,7 +279,6 @@ jobs:
 
             ✅ All validations passed
             ✅ Infrastructure deployed
-            ✅ BigQuery setup complete
             ✅ Health checks passed
 
             **Cricket Analytics Pipeline is LIVE in PRODUCTION**

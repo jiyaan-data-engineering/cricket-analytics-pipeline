@@ -42,7 +42,6 @@ env/
 *.tfstate.*
 .terraform/
 .terraform.lock.hcl
-terraform.tfvars
 *.pem
 *.pub
 

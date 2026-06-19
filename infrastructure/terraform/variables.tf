@@ -17,10 +17,6 @@ variable "gcp_region" {
 variable "environment" {
   description = "Environment: dev, staging, or prod"
   type        = string
-  validation {
-    condition     = contains(["dev", "staging", "prod"], var.environment)
-    error_message = "Environment must be dev, staging, or prod."
-  }
 }
 
 # GCS Bucket Names

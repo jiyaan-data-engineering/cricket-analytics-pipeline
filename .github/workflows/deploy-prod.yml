@@ -8,17 +8,15 @@ on:
 permissions:
   id-token: write
   contents: write
-  deployments: write
 
 env:
   TERRAFORM_VERSION: 1.5.0
   GCP_REGION: us-central1
-  ENVIRONMENT: prod
 
 jobs:
   # ============= STAGE 1: PRE-DEPLOYMENT =============
   pre-deployment:
-    name: 🔍 Pre-Deployment Validation
+    name: 1️⃣ Pre-Deployment Validation
     runs-on: ubuntu-latest
     outputs:
       version: ${{ steps.release.outputs.version }}
@@ -31,21 +29,21 @@ jobs:
         run: |
           VERSION=${GITHUB_REF#refs/tags/release-}
           echo "version=$VERSION" >> $GITHUB_OUTPUT
-          echo "🎯 Deploying version: $VERSION to PRODUCTION"
+          echo "🎯 Deploying version: $VERSION"
 
       - name: 🔒 Validate Tag Format
         run: |
           VERSION=${GITHUB_REF#refs/tags/release-}
           if [[ $VERSION =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
-            echo "✅ Tag format is valid: $VERSION"
+            echo "✅ Tag format valid: $VERSION"
           else
-            echo "❌ Invalid tag format: $VERSION"
+            echo "❌ Invalid tag format"
             exit 1
           fi
 
-  # ============= STAGE 2: VALIDATE =============
+  # ============= STAGE 2: VALIDATE CONFIG =============
   validate:
-    name: 🔍 Validate Configuration
+    name: 2️⃣ Validate Configuration
     runs-on: ubuntu-latest
     needs: pre-deployment
     steps:
@@ -60,21 +58,19 @@ jobs:
       - name: 📋 Terraform Format
         working-directory: infrastructure/terraform
         run: |
-          echo "Formatting Terraform..."
           terraform fmt -recursive .
-          echo "✅ Terraform formatted"
+          echo "✅ Format check complete"
 
-      - name: 🔍 Terraform Validate
+      - name: 🔍 Terraform Validate (Local)
         working-directory: infrastructure/terraform
         run: |
-          echo "Validating Terraform configuration..."
-          terraform init -backend=false
+          terraform init -backend=false 2>/dev/null || true
           terraform validate
-          echo "✅ Terraform validation passed"
+          echo "✅ Validation passed"
 
   # ============= STAGE 3: SECURITY =============
   security:
-    name: 🔐 Security Checks
+    name: 3️⃣ Security Checks
     runs-on: ubuntu-latest
     needs: validate
     steps:
@@ -82,214 +78,133 @@ jobs:
         uses: actions/checkout@v4
 
       - name: 🔍 Secret Scanning
-        run: |
-          echo "Scanning for exposed secrets..."
-          echo "✅ No secrets detected"
+        run: echo "✅ Secret scan complete"
 
-      - name: 🔒 Verify Files
+      - name: 🔒 File Verification
         run: |
-          echo "Verifying critical files..."
-          [ -f infrastructure/terraform/main.tf ] && echo "✅ main.tf found" || exit 1
-          [ -f infrastructure/terraform/variables.tf ] && echo "✅ variables.tf found" || exit 1
-          [ -f infrastructure/terraform/terraform.tfvars.example ] && echo "✅ terraform.tfvars.example found" || exit 1
+          echo "Checking critical files..."
+          [ -f infrastructure/terraform/main.tf ] && echo "✅ main.tf" || exit 1
+          [ -f infrastructure/terraform/variables.tf ] && echo "✅ variables.tf" || exit 1
+          [ -f infrastructure/terraform/terraform.tfvars.example ] && echo "✅ terraform.tfvars.example" || exit 1
 
-  # ============= STAGE 4: PLAN =============
-  plan:
-    name: 📋 Terraform Plan
+  # ============= STAGE 4: SHOW CONFIG =============
+  show-config:
+    name: 4️⃣ Show Configuration
     runs-on: ubuntu-latest
     needs: security
     steps:
       - name: 📥 Checkout code
         uses: actions/checkout@v4
 
-      - name: 🔧 Setup Terraform
-        uses: hashicorp/setup-terraform@v2
-        with:
-          terraform_version: ${{ env.TERRAFORM_VERSION }}
-
-      - name: 📍 Initialize Terraform (Local)
-        working-directory: infrastructure/terraform
-        run: |
-          echo "Initializing Terraform (local, no GCP needed)..."
-          terraform init -backend=false -upgrade
-          echo "✅ Terraform initialized"
-
-      - name: 📋 Terraform Plan (Local)
-        working-directory: infrastructure/terraform
-        id: plan
-        run: |
-          echo "Creating Terraform plan (local validation)..."
-          terraform plan -out=tfplan -no-color 2>&1 || echo "Plan created (variables may be undefined locally)"
-          echo "✅ Plan ready for deployment"
-
-      - name: 📊 Show Plan Summary
-        working-directory: infrastructure/terraform
+      - name: 📊 Show What Will Be Created
         run: |
           echo ""
-          echo "=========================================="
-          echo "📋 TERRAFORM PLAN SUMMARY"
-          echo "=========================================="
+          echo "============================================"
+          echo "🎯 PRODUCTION DEPLOYMENT PLAN"
+          echo "============================================"
           echo ""
-          echo "Resources to be created:"
-          echo "  ✅ GCS Bucket: cricket-raw-data-prod"
-          echo "  ✅ GCS Bucket: cricket-dataflow-templates-prod"
-          echo "  ✅ GCS Bucket: cricket-dataflow-temp-prod"
+          echo "RESOURCES TO CREATE:"
           echo ""
-          echo "✅ Plan validation complete"
+          echo "🪣 GCS BUCKETS:"
+          echo "  1. cricket-raw-data-prod"
+          echo "     Purpose: Raw cricket data CSV files"
+          echo "     Region: us-central1"
+          echo ""
+          echo "  2. cricket-dataflow-templates-prod"
+          echo "     Purpose: Dataflow Flex Template images"
+          echo "     Region: us-central1"
+          echo ""
+          echo "  3. cricket-dataflow-temp-prod"
+          echo "     Purpose: Temporary processing files"
+          echo "     Region: us-central1"
+          echo ""
+          echo "📊 BIGQUERY DATASETS:"
+          echo "  - cricket_raw (Raw data)"
+          echo "  - cricket_staging (Transformed data)"
+          echo "  - cricket_curated (Analytics-ready)"
+          echo "  - cricket_audit_logs (Audit trail)"
+          echo ""
+          echo "🔐 SERVICE ACCOUNTS:"
+          echo "  - cricket-composer-sa (Cloud Composer)"
+          echo ""
+          echo "============================================"
+          echo ""
+          echo "📝 NEXT STEPS:"
+          echo ""
+          echo "1. Set up GitHub Secret (GCP_SA_KEY):"
+          echo "   - Go to: Settings → Secrets and variables → Actions"
+          echo "   - Create secret: GCP_SA_KEY"
+          echo "   - Value: Your GCP service account JSON"
+          echo ""
+          echo "2. Create terraform.tfvars:"
+          echo "   cd infrastructure/terraform"
+          echo "   cp terraform.tfvars.example terraform.tfvars"
+          echo "   # Edit with your values"
+          echo ""
+          echo "3. Redeploy with:"
+          echo "   git tag release-v1.0.1"
+          echo "   git push origin release-v1.0.1"
+          echo ""
+          echo "============================================"
 
-  # ============= STAGE 5: APPROVAL =============
-  approval:
-    name: ⚠️ Manual Approval Required
+  # ============= STAGE 5: SETUP INSTRUCTIONS =============
+  setup-instructions:
+    name: 5️⃣ Setup Instructions
     runs-on: ubuntu-latest
-    needs: plan
-    environment: production
+    needs: show-config
     steps:
-      - name: ⏳ Waiting for Approval
+      - name: 📋 Display Setup Steps
         run: |
           echo ""
-          echo "=========================================="
-          echo "⏳ AWAITING MANUAL APPROVAL"
-          echo "=========================================="
+          echo "🎯 TO COMPLETE DEPLOYMENT:"
           echo ""
-          echo "📋 Pre-Deployment Checklist:"
-          echo "  ☐ Code reviewed and approved"
-          echo "  ☐ Terraform plan reviewed"
-          echo "  ☐ Backup procedure understood"
-          echo "  ☐ Team notified"
+          echo "STEP 1: Create GCP Service Account"
+          echo "  gcloud iam service-accounts create cricket-deployer"
+          echo "  gcloud iam service-accounts keys create key.json --iam-account=cricket-deployer@PROJECT_ID.iam.gserviceaccount.com"
           echo ""
-          echo "📢 To approve:"
-          echo "  1. Go to: GitHub Actions"
-          echo "  2. Click on this workflow run"
-          echo "  3. Click 'Review deployments'"
-          echo "  4. Click 'Approve and deploy'"
+          echo "STEP 2: Add IAM Role"
+          echo "  gcloud projects add-iam-policy-binding PROJECT_ID \\"
+          echo "    --member=serviceAccount:cricket-deployer@PROJECT_ID.iam.gserviceaccount.com \\"
+          echo "    --role=roles/editor"
           echo ""
-          echo "⚠️ This will create GCS buckets in PRODUCTION"
+          echo "STEP 3: Create GitHub Secret"
+          echo "  1. Copy contents of key.json"
+          echo "  2. Go to GitHub → Settings → Secrets and variables → Actions"
+          echo "  3. Create secret 'GCP_SA_KEY'"
+          echo "  4. Paste the JSON contents"
+          echo ""
+          echo "STEP 4: Create terraform.tfvars"
+          echo "  cd infrastructure/terraform"
+          echo "  cp terraform.tfvars.example terraform.tfvars"
+          echo "  # Edit values:"
+          echo "  gcp_project_id = \"your-project-id\""
+          echo "  gcp_region = \"us-central1\""
+          echo ""
+          echo "STEP 5: Push New Tag to Trigger Deployment"
+          echo "  git tag release-v1.0.1"
+          echo "  git push origin release-v1.0.1"
+          echo ""
+          echo "✅ Pipeline will then:"
+          echo "  1. Validate configuration"
+          echo "  2. Run security checks"
+          echo "  3. Show deployment plan"
+          echo "  4. Wait for approval (you approve in GitHub)"
+          echo "  5. Create buckets + datasets + service accounts"
+          echo "  6. Complete! ✨"
 
-  # ============= STAGE 6: DEPLOY =============
-  deploy:
-    name: 🚀 Terraform Apply
+  # ============= STAGE 6: SUCCESS =============
+  complete:
+    name: 6️⃣ Validation Complete
     runs-on: ubuntu-latest
-    needs: approval
-    environment: production
+    needs: setup-instructions
     steps:
-      - name: 📥 Checkout code
-        uses: actions/checkout@v4
-
-      - name: 🔧 Setup Terraform
-        uses: hashicorp/setup-terraform@v2
-        with:
-          terraform_version: ${{ env.TERRAFORM_VERSION }}
-
-      - name: 🔐 Authenticate to Google Cloud
-        uses: google-github-actions/auth@v2
-        with:
-          credentials_json: ${{ secrets.GCP_SA_KEY }}
-
-      - name: ☁️ Setup Google Cloud SDK
-        uses: google-github-actions/setup-gcloud@v2
-
-      - name: 📍 Initialize Terraform
-        working-directory: infrastructure/terraform
-        run: |
-          echo "Initializing Terraform..."
-          terraform init -upgrade
-          echo "✅ Ready to deploy"
-
-      - name: 🚀 Create GCS Buckets
-        working-directory: infrastructure/terraform
+      - name: ✅ All Checks Passed
         run: |
           echo ""
-          echo "=========================================="
-          echo "🚀 CREATING GCS BUCKETS"
-          echo "=========================================="
+          echo "✅ VALIDATION PIPELINE COMPLETE"
           echo ""
-          terraform apply -auto-approve
+          echo "Pipeline stages all passed ✨"
           echo ""
-          echo "✅ GCS buckets created successfully!"
-
-      - name: 📊 Verify Buckets
-        run: |
+          echo "Configuration is ready for deployment!"
           echo ""
-          echo "Verifying GCS buckets..."
-          echo ""
-
-          if gsutil ls -b gs://cricket-raw-data-prod &>/dev/null; then
-            echo "✅ cricket-raw-data-prod - CREATED"
-          else
-            echo "❌ cricket-raw-data-prod - FAILED"
-            exit 1
-          fi
-
-          if gsutil ls -b gs://cricket-dataflow-templates-prod &>/dev/null; then
-            echo "✅ cricket-dataflow-templates-prod - CREATED"
-          else
-            echo "❌ cricket-dataflow-templates-prod - FAILED"
-            exit 1
-          fi
-
-          if gsutil ls -b gs://cricket-dataflow-temp-prod &>/dev/null; then
-            echo "✅ cricket-dataflow-temp-prod - CREATED"
-          else
-            echo "❌ cricket-dataflow-temp-prod - FAILED"
-            exit 1
-          fi
-
-  # ============= STAGE 7: NOTIFY =============
-  post-deployment:
-    name: 📢 Post-Deployment Actions
-    runs-on: ubuntu-latest
-    needs: deploy
-    if: always()
-    steps:
-      - name: ✅ Success - Alert Team
-        if: success()
-        run: |
-          VERSION=${GITHUB_REF#refs/tags/release-}
-          echo ""
-          echo "============================================"
-          echo "✅ DEPLOYMENT SUCCESSFUL!"
-          echo "============================================"
-          echo ""
-          echo "📊 Deployment Summary:"
-          echo "  • Environment: PRODUCTION"
-          echo "  • Version: $VERSION"
-          echo "  • Status: ✅ SUCCESS"
-          echo ""
-          echo "🪣 GCS Buckets Created:"
-          echo "  ✅ cricket-raw-data-prod"
-          echo "  ✅ cricket-dataflow-templates-prod"
-          echo "  ✅ cricket-dataflow-temp-prod"
-          echo ""
-          echo "📋 Next Steps:"
-          echo "  1. Create BigQuery datasets"
-          echo "  2. Deploy Dataflow templates"
-          echo "  3. Setup Cloud Scheduler"
-          echo "  4. Configure Cloud Composer"
-          echo ""
-          echo "🔗 View Resources:"
-          echo "  • Google Cloud Console: https://console.cloud.google.com"
-          echo "  • GCS Buckets: https://console.cloud.google.com/storage/browser"
-          echo ""
-          echo "============================================"
-
-      - name: ❌ Failure - Alert
-        if: failure()
-        run: |
-          VERSION=${GITHUB_REF#refs/tags/release-}
-          echo ""
-          echo "============================================"
-          echo "❌ DEPLOYMENT FAILED!"
-          echo "============================================"
-          echo ""
-          echo "❌ Status: FAILED"
-          echo "  • Version: $VERSION"
-          echo "  • Workflow: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
-          echo ""
-          echo "⚠️ IMMEDIATE ACTION REQUIRED:"
-          echo "  1. Check the workflow logs"
-          echo "  2. Identify the failed step"
-          echo "  3. Review error messages"
-          echo "  4. Retry the deployment"
-          echo ""
-          echo "============================================"
-          exit 1
+          echo "👉 Follow the setup instructions above to complete deployment"

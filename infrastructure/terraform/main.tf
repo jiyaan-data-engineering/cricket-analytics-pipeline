@@ -140,89 +140,90 @@ resource "google_storage_bucket" "temp" {
 # ============================================================================
 # LOOKER STUDIO DASHBOARD
 # ============================================================================
+# TODO: Uncomment when BigQuery curated dataset is enabled
 
-resource "local_file" "looker_studio_setup" {
-  filename = "${path.module}/../../scripts/create-looker-dashboard.sh"
-  content  = <<-EOT
-    #!/bin/bash
-
-    # ============================================================================
-    # CREATE LOOKER STUDIO DASHBOARD
-    # ============================================================================
-    # This script creates a Looker Studio dashboard connected to cricket_curated dataset
-    # Manual setup required - use Looker Studio API or UI
-
-    set -e
-
-    PROJECT_ID="${var.gcp_project_id}"
-    REGION="${var.gcp_region}"
-    DASHBOARD_NAME="Cricket Analytics - Batting Rankings"
-
-    echo "🚀 Looker Studio Dashboard Setup"
-    echo "=================================="
-    echo "Project: $PROJECT_ID"
-    echo "Dataset: cricket_curated"
-    echo "Region: $REGION"
-    echo ""
-
-    echo "📊 Dashboard Configuration:"
-    echo "  Name: $DASHBOARD_NAME"
-    echo "  Data Source: cricket_curated"
-    echo ""
-
-    echo "⚠️ MANUAL SETUP REQUIRED (Looker Studio API not available via Terraform)"
-    echo ""
-    echo "📋 Steps to create dashboard:"
-    echo "  1. Go to: https://lookerstudio.google.com"
-    echo "  2. Click 'Create' → 'Report'"
-    echo "  3. Click 'Create new data source'"
-    echo "  4. Select 'BigQuery' connector"
-    echo "  5. Authenticate with your GCP account"
-    echo "  6. Select Project: $PROJECT_ID"
-    echo "  7. Select Dataset: cricket_curated"
-    echo "  8. Create data source"
-    echo ""
-    echo "📈 Add these visualizations:"
-    echo "  • Table: vw_batting_rankings_latest"
-    echo "    Dimensions: player_name, country, format, rank"
-    echo "    Metrics: rating, points"
-    echo ""
-    echo "  • Time Series: vw_batting_rankings_90day_trend"
-    echo "    Dimension: ingested_date"
-    echo "    Metric: rank (line chart)"
-    echo ""
-    echo "  • Bar Chart: vw_top_10_batsmen_by_format"
-    echo "    Dimension: format"
-    echo "    Metric: player_count"
-    echo ""
-    echo "  • Scorecard: vw_batting_statistics_by_country"
-    echo "    Metric: avg_rating (by country)"
-    echo ""
-    echo "  • Pivot Table: vw_ranking_comparison_cross_format"
-    echo "    Rows: player_name"
-    echo "    Values: test_rank, odi_rank, t20i_rank"
-    echo ""
-    echo "🔄 Configure auto-refresh:"
-    echo "  • Refresh interval: Daily at 09:00 UTC"
-    echo "  • Data freshness: Cricket Analytics main DAG completes at 08:00 UTC"
-    echo ""
-    echo "✅ Dashboard creation complete!"
-  EOT
-
-  depends_on = [
-    google_bigquery_dataset.curated
-  ]
-}
-
-resource "null_resource" "looker_studio_script" {
-  provisioner "local-exec" {
-    command = "chmod +x ${local_file.looker_studio_setup.filename}"
-  }
-
-  depends_on = [
-    local_file.looker_studio_setup
-  ]
-}
+# resource "local_file" "looker_studio_setup" {
+#   filename = "${path.module}/../../scripts/create-looker-dashboard.sh"
+#   content  = <<-EOT
+#     #!/bin/bash
+#
+#     # ============================================================================
+#     # CREATE LOOKER STUDIO DASHBOARD
+#     # ============================================================================
+#     # This script creates a Looker Studio dashboard connected to cricket_curated dataset
+#     # Manual setup required - use Looker Studio API or UI
+#
+#     set -e
+#
+#     PROJECT_ID="${var.gcp_project_id}"
+#     REGION="${var.gcp_region}"
+#     DASHBOARD_NAME="Cricket Analytics - Batting Rankings"
+#
+#     echo "🚀 Looker Studio Dashboard Setup"
+#     echo "=================================="
+#     echo "Project: $PROJECT_ID"
+#     echo "Dataset: cricket_curated"
+#     echo "Region: $REGION"
+#     echo ""
+#
+#     echo "📊 Dashboard Configuration:"
+#     echo "  Name: $DASHBOARD_NAME"
+#     echo "  Data Source: cricket_curated"
+#     echo ""
+#
+#     echo "⚠️ MANUAL SETUP REQUIRED (Looker Studio API not available via Terraform)"
+#     echo ""
+#     echo "📋 Steps to create dashboard:"
+#     echo "  1. Go to: https://lookerstudio.google.com"
+#     echo "  2. Click 'Create' → 'Report'"
+#     echo "  3. Click 'Create new data source'"
+#     echo "  4. Select 'BigQuery' connector"
+#     echo "  5. Authenticate with your GCP account"
+#     echo "  6. Select Project: $PROJECT_ID"
+#     echo "  7. Select Dataset: cricket_curated"
+#     echo "  8. Create data source"
+#     echo ""
+#     echo "📈 Add these visualizations:"
+#     echo "  • Table: vw_batting_rankings_latest"
+#     echo "    Dimensions: player_name, country, format, rank"
+#     echo "    Metrics: rating, points"
+#     echo ""
+#     echo "  • Time Series: vw_batting_rankings_90day_trend"
+#     echo "    Dimension: ingested_date"
+#     echo "    Metric: rank (line chart)"
+#     echo ""
+#     echo "  • Bar Chart: vw_top_10_batsmen_by_format"
+#     echo "    Dimension: format"
+#     echo "    Metric: player_count"
+#     echo ""
+#     echo "  • Scorecard: vw_batting_statistics_by_country"
+#     echo "    Metric: avg_rating (by country)"
+#     echo ""
+#     echo "  • Pivot Table: vw_ranking_comparison_cross_format"
+#     echo "    Rows: player_name"
+#     echo "    Values: test_rank, odi_rank, t20i_rank"
+#     echo ""
+#     echo "🔄 Configure auto-refresh:"
+#     echo "  • Refresh interval: Daily at 09:00 UTC"
+#     echo "  • Data freshness: Cricket Analytics main DAG completes at 08:00 UTC"
+#     echo ""
+#     echo "✅ Dashboard creation complete!"
+#   EOT
+#
+#   depends_on = [
+#     google_bigquery_dataset.curated
+#   ]
+# }
+#
+# resource "null_resource" "looker_studio_script" {
+#   provisioner "local-exec" {
+#     command = "chmod +x ${local_file.looker_studio_setup.filename}"
+#   }
+#
+#   depends_on = [
+#     local_file.looker_studio_setup
+#   ]
+# }
 
 # Looker Studio dashboard automation is provided via scripts:
 # - scripts/create-looker-dashboard.sh (interactive setup guide)

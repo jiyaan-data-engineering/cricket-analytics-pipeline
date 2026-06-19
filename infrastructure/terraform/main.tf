@@ -12,8 +12,9 @@ terraform {
     }
   }
 
-  backend "local" {
-    path = "terraform.tfstate"
+  backend "gcs" {
+    bucket = "cricket-analytics-prod-tfstate"
+    prefix = "terraform/state"
   }
 }
 

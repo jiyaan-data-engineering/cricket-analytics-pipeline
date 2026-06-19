@@ -32,29 +32,28 @@ output "temp_bucket" {
 }
 
 # ============================================================================
-# BIGQUERY DATASETS (COMMENTED - ENABLE IN PHASE 2)
+# BIGQUERY DATASETS (ACTIVE)
 # ============================================================================
-# TODO: Uncomment when BigQuery datasets are enabled in main.tf
 
-# output "raw_dataset" {
-#   value       = google_bigquery_dataset.raw.dataset_id
-#   description = "BigQuery raw dataset"
-# }
-#
-# output "staging_dataset" {
-#   value       = google_bigquery_dataset.staging.dataset_id
-#   description = "BigQuery staging dataset"
-# }
-#
-# output "curated_dataset" {
-#   value       = google_bigquery_dataset.curated.dataset_id
-#   description = "BigQuery curated dataset"
-# }
-#
-# output "audit_logs_dataset" {
-#   value       = google_bigquery_dataset.audit_logs.dataset_id
-#   description = "BigQuery audit logs dataset"
-# }
+output "raw_dataset" {
+  value       = google_bigquery_dataset.raw.dataset_id
+  description = "BigQuery raw dataset"
+}
+
+output "staging_dataset" {
+  value       = google_bigquery_dataset.staging.dataset_id
+  description = "BigQuery staging dataset"
+}
+
+output "curated_dataset" {
+  value       = google_bigquery_dataset.curated.dataset_id
+  description = "BigQuery curated dataset"
+}
+
+output "audit_logs_dataset" {
+  value       = google_bigquery_dataset.audit_logs.dataset_id
+  description = "BigQuery audit logs dataset"
+}
 
 # ============================================================================
 # SERVICE ACCOUNTS (COMMENTED - ENABLE WHEN NEEDED)

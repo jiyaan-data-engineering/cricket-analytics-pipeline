@@ -104,39 +104,46 @@ resource "google_storage_bucket" "temp" {
 # ============================================================================
 # CREATE BIGQUERY DATASETS
 # ============================================================================
-# TODO: Uncomment when ready to create BigQuery datasets
 
-# resource "google_bigquery_dataset" "raw" {
-#   dataset_id    = var.raw_dataset_name
-#   friendly_name = "Cricket Raw Data"
-#   description   = "Raw data ingestion layer"
-#   location      = var.gcp_region
-#   project       = var.gcp_project_id
-# }
-#
-# resource "google_bigquery_dataset" "staging" {
-#   dataset_id    = var.staging_dataset_name
-#   friendly_name = "Cricket Staging"
-#   description   = "Staging/transformed data layer"
-#   location      = var.gcp_region
-#   project       = var.gcp_project_id
-# }
-#
-# resource "google_bigquery_dataset" "curated" {
-#   dataset_id    = var.curated_dataset_name
-#   friendly_name = "Cricket Curated"
-#   description   = "Curated/analytics-ready data"
-#   location      = var.gcp_region
-#   project       = var.gcp_project_id
-# }
-#
-# resource "google_bigquery_dataset" "audit_logs" {
-#   dataset_id    = var.audit_logs_dataset_name
-#   friendly_name = "Cricket Audit Logs"
-#   description   = "Pipeline audit and monitoring logs"
-#   location      = var.gcp_region
-#   project       = var.gcp_project_id
-# }
+resource "google_bigquery_dataset" "raw" {
+  dataset_id    = var.raw_dataset_name
+  friendly_name = "Cricket Raw Data"
+  description   = "Raw data ingestion layer"
+  location      = var.gcp_region
+  project       = var.gcp_project_id
+
+  depends_on = [google_project_service.required_apis]
+}
+
+resource "google_bigquery_dataset" "staging" {
+  dataset_id    = var.staging_dataset_name
+  friendly_name = "Cricket Staging"
+  description   = "Staging/transformed data layer"
+  location      = var.gcp_region
+  project       = var.gcp_project_id
+
+  depends_on = [google_project_service.required_apis]
+}
+
+resource "google_bigquery_dataset" "curated" {
+  dataset_id    = var.curated_dataset_name
+  friendly_name = "Cricket Curated"
+  description   = "Curated/analytics-ready data"
+  location      = var.gcp_region
+  project       = var.gcp_project_id
+
+  depends_on = [google_project_service.required_apis]
+}
+
+resource "google_bigquery_dataset" "audit_logs" {
+  dataset_id    = var.audit_logs_dataset_name
+  friendly_name = "Cricket Audit Logs"
+  description   = "Pipeline audit and monitoring logs"
+  location      = var.gcp_region
+  project       = var.gcp_project_id
+
+  depends_on = [google_project_service.required_apis]
+}
 
 # ============================================================================
 # LOOKER STUDIO DASHBOARD

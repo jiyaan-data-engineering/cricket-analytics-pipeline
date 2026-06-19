@@ -7,7 +7,7 @@ on:
 
 permissions:
   id-token: write
-  contents: read
+  contents: write
 
 env:
   TERRAFORM_VERSION: 1.5.0
@@ -334,3 +334,4 @@ jobs:
             **Cricket Analytics Pipeline is LIVE in PRODUCTION**
           draft: false
           prerelease: false
+          token: ${{ secrets.GITHUB_TOKEN }}

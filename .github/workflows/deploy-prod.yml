@@ -42,9 +42,9 @@ jobs:
 
       - name: Initialize Terraform
         working-directory: infrastructure/terraform
-        run: terraform init -backend=false
+        run: terraform init
 
-      - name: Terraform Plan (Local)
+      - name: Terraform Plan
         working-directory: infrastructure/terraform
         run: |
           terraform plan -out=tfplan

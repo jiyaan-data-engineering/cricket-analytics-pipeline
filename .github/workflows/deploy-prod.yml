@@ -104,6 +104,30 @@ jobs:
             -backend-config="bucket=cricket-analytics-prod-tfstate" \
             -backend-config="prefix=terraform/state"
 
+      - name: 🔄 Import Existing GCS Buckets (if needed)
+        working-directory: infrastructure/terraform
+        run: |
+          echo "🔄 Checking for existing GCS buckets to import..."
+
+          # Function to import bucket if not in state
+          import_bucket_if_exists() {
+            local bucket=$1
+            local resource=$2
+
+            if gsutil ls -b gs://$bucket &>/dev/null; then
+              if ! terraform state show google_storage_bucket.$resource &>/dev/null 2>&1; then
+                echo "📥 Importing bucket: $bucket"
+                terraform import -auto-approve google_storage_bucket.$resource $bucket || true
+              else
+                echo "✅ Bucket already in state: $bucket"
+              fi
+            fi
+          }
+
+          import_bucket_if_exists "cricket-raw-data-prod" "raw_data"
+          import_bucket_if_exists "cricket-dataflow-templates-prod" "templates"
+          import_bucket_if_exists "cricket-dataflow-temp-prod" "temp"
+
       - name: 📋 Terraform Plan
         working-directory: infrastructure/terraform
         id: plan
@@ -162,30 +186,6 @@ jobs:
         with:
           name: terraform-plan-prod
           path: infrastructure/terraform/
-
-      - name: 🔄 Import Existing GCS Buckets (if needed)
-        working-directory: infrastructure/terraform
-        run: |
-          echo "🔄 Checking for existing GCS buckets to import..."
-
-          # Function to import bucket if not in state
-          import_bucket_if_exists() {
-            local bucket=$1
-            local resource=$2
-
-            if gsutil ls -b gs://$bucket &>/dev/null; then
-              if ! terraform state show google_storage_bucket.$resource &>/dev/null; then
-                echo "📥 Importing bucket: $bucket"
-                terraform import google_storage_bucket.$resource $bucket || echo "Already in state"
-              else
-                echo "✅ Bucket already in state: $bucket"
-              fi
-            fi
-          }
-
-          import_bucket_if_exists "cricket-raw-data-prod" "raw_data"
-          import_bucket_if_exists "cricket-dataflow-templates-prod" "templates"
-          import_bucket_if_exists "cricket-dataflow-temp-prod" "temp"
 
       - name: 🚀 Terraform Apply
         working-directory: infrastructure/terraform

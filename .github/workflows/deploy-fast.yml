@@ -11,10 +11,9 @@ env:
   ENVIRONMENT: prod
 
 jobs:
-  deploy:
-    name: ⚡ Quick Deploy
+  validate:
+    name: ⚡ Validate Terraform
     runs-on: ubuntu-latest
-    environment: production
     steps:
       - name: 📥 Checkout code
         uses: actions/checkout@v4
@@ -23,14 +22,6 @@ jobs:
         uses: hashicorp/setup-terraform@v2
         with:
           terraform_version: ${{ env.TERRAFORM_VERSION }}
-
-      - name: 🔐 Authenticate to Google Cloud
-        uses: google-github-actions/auth@v1
-        with:
-          credentials_json: ${{ secrets.GCP_SA_KEY }}
-
-      - name: ☁️ Setup Google Cloud SDK
-        uses: google-github-actions/setup-gcloud@v1
 
       - name: 📋 Terraform Format & Validate
         working-directory: infrastructure/terraform
@@ -42,46 +33,26 @@ jobs:
           terraform validate
           echo "✅ Validation passed"
 
-      - name: 📍 Initialize Terraform
-        working-directory: infrastructure/terraform
-        run: |
-          terraform init -upgrade
-
-      - name: 📋 Terraform Plan
-        working-directory: infrastructure/terraform
-        run: |
-          terraform plan -out=tfplan
-          echo "✅ Plan created"
-
-      - name: 🚀 Terraform Apply
-        working-directory: infrastructure/terraform
-        run: |
-          echo "Applying Terraform..."
-          terraform apply -auto-approve tfplan
-          echo "✅ Infrastructure created"
-
-      - name: 📊 Show Outputs
-        working-directory: infrastructure/terraform
+      - name: 📧 Validation Complete
         run: |
           echo ""
-          echo "============================================"
-          echo "✅ DEPLOYMENT COMPLETE"
-          echo "============================================"
+          echo "✅ TERRAFORM VALIDATION PASSED"
           echo ""
-          terraform output
+          echo "Next steps to deploy:"
           echo ""
-          echo "Next steps:"
-          echo "1. Create terraform.tfvars from terraform.tfvars.example"
-          echo "2. Update with your values"
-          echo "3. Run: terraform apply"
-
-      - name: 📧 Notify Success
-        run: |
-          echo "✅ Fast deployment successful!"
+          echo "1. Create terraform.tfvars:"
+          echo "   cp infrastructure/terraform/terraform.tfvars.example \\"
+          echo "      infrastructure/terraform/terraform.tfvars"
           echo ""
-          echo "Infrastructure created:"
-          echo "  • GCS buckets"
-          echo "  • BigQuery datasets"
-          echo "  • Service accounts"
+          echo "2. Edit terraform.tfvars with YOUR values:"
+          echo "   gcp_project_id = \"your-project\""
+          echo "   gcp_region = \"us-central1\""
+          echo "   ... etc"
           echo ""
-          echo "Next: Deploy DAGs and Dataflow template"
+          echo "3. Deploy locally:"
+          echo "   cd infrastructure/terraform"
+          echo "   terraform init"
+          echo "   terraform plan"
+          echo "   terraform apply"
+          echo ""
+          echo "✨ All Terraform configuration is valid!"

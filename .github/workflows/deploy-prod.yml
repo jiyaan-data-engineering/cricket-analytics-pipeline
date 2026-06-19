@@ -194,11 +194,22 @@ jobs:
           terraform apply -auto-approve tfplan
           echo "✅ Infrastructure deployed successfully"
 
-      - name: 📊 Show Outputs
+      - name: 📊 Show Deployment Summary
         working-directory: infrastructure/terraform
         run: |
-          echo "📊 Deployment Outputs:"
-          terraform output -json | jq .
+          echo "📊 Deployment Summary:"
+          echo "===================="
+          echo ""
+          echo "✅ GCS Buckets Created:"
+          terraform output -raw raw_data_bucket 2>/dev/null && echo "  • Raw Data Bucket: $(terraform output -raw raw_data_bucket)" || true
+          terraform output -raw templates_bucket 2>/dev/null && echo "  • Templates Bucket: $(terraform output -raw templates_bucket)" || true
+          terraform output -raw temp_bucket 2>/dev/null && echo "  • Temp Bucket: $(terraform output -raw temp_bucket)" || true
+          echo ""
+          echo "✅ Project Configuration:"
+          echo "  • Project ID: $(terraform output -raw gcp_project_id)"
+          echo "  • Region: $(terraform output -raw gcp_region)"
+          echo ""
+          echo "✅ Infrastructure Successfully Deployed!"
 
   # ============= HEALTH CHECKS =============
   health-checks:

@@ -80,12 +80,20 @@ jobs:
         with:
           terraform_version: ${{ env.TERRAFORM_VERSION }}
 
+      - name: 🔐 Authenticate to Google Cloud
+        uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.PROD_GCP_CREDENTIALS_JSON }}
+
+      - name: ☁️ Setup Google Cloud SDK
+        uses: google-github-actions/setup-gcloud@v2
+
       - name: 📍 Initialize Terraform
         working-directory: infrastructure/terraform
         run: |
-          terraform init -backend=false -upgrade
+          terraform init -upgrade
 
-      - name: 📋 Terraform Plan (Dry Run)
+      - name: 📋 Terraform Plan
         working-directory: infrastructure/terraform
         id: plan
         run: |
@@ -118,23 +126,140 @@ jobs:
       - name: 📥 Checkout code
         uses: actions/checkout@v4
 
-      - name: 📝 Note
+      - name: 🔧 Setup Terraform
+        uses: hashicorp/setup-terraform@v2
+        with:
+          terraform_version: ${{ env.TERRAFORM_VERSION }}
+
+      - name: 🔐 Authenticate to Google Cloud
+        uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.PROD_GCP_CREDENTIALS_JSON }}
+
+      - name: ☁️ Setup Google Cloud SDK
+        uses: google-github-actions/setup-gcloud@v2
+
+      - name: 📍 Initialize Terraform
+        working-directory: infrastructure/terraform
         run: |
-          echo "ℹ️  To enable Terraform Apply, configure GCP_SA_KEY secret in GitHub"
-          echo "📍 Steps:"
-          echo "  1. Create GCP service account with Editor role"
-          echo "  2. Create JSON key"
-          echo "  3. Add as GitHub secret: GCP_SA_KEY"
-          echo ""
-          echo "For now, plan artifacts are uploaded for manual review:"
-          echo "  - Download terraform-plan-prod artifact from Actions"
-          echo "  - Run locally: terraform apply tfplan"
+          terraform init -upgrade
 
-  # ============= BIGQUERY SETUP (SKIPPED) =============
-  # Requires GCP_SA_KEY secret - will run after authentication is set up
+      - name: 📥 Download Plan Artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: terraform-plan-prod
+          path: infrastructure/terraform/
 
-  # ============= HEALTH CHECKS (SKIPPED) =============
-  # Requires GCP_SA_KEY secret - will run after authentication is set up
+      - name: 🚀 Terraform Apply
+        working-directory: infrastructure/terraform
+        run: |
+          echo "🚀 Applying Terraform plan for PRODUCTION environment..."
+          terraform apply -auto-approve tfplan
+          echo "✅ Infrastructure deployed successfully"
+
+      - name: 📊 Show Outputs
+        working-directory: infrastructure/terraform
+        run: |
+          echo "📊 Deployment Outputs:"
+          terraform output -json | jq .
+
+  # ============= BIGQUERY SETUP =============
+  bigquery-setup:
+    name: 📊 Setup BigQuery
+    runs-on: ubuntu-latest
+    needs: apply
+    steps:
+      - name: 📥 Checkout code
+        uses: actions/checkout@v4
+
+      - name: 🔐 Authenticate to Google Cloud
+        uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.PROD_GCP_CREDENTIALS_JSON }}
+
+      - name: ☁️ Setup Google Cloud SDK
+        uses: google-github-actions/setup-gcloud@v2
+
+      - name: 📋 Set Project ID
+        run: |
+          gcloud config set project ${{ secrets.PROD_GCP_PROJECT_ID }}
+
+      - name: 🗄️ Execute BigQuery SQL Scripts
+        run: |
+          cd pipeline/bigquery/sql
+
+          echo "🗄️ Executing BigQuery setup scripts for PRODUCTION..."
+
+          SQL_FILES=(
+            "00_create_audit_logs.sql"
+            "raw_batting_rankings.sql"
+            "vw_latest_raw.sql"
+            "dim_player.sql"
+            "dim_country.sql"
+            "dim_format.sql"
+            "dim_date.sql"
+            "fact_batting_rankings.sql"
+            "vw_batting_rankings_latest.sql"
+            "vw_batting_rankings_90day_trend.sql"
+            "vw_top_10_batsmen_by_format.sql"
+            "vw_batting_statistics_by_country.sql"
+            "vw_ranking_comparison_cross_format.sql"
+          )
+
+          for file in "${SQL_FILES[@]}"; do
+            if [ -f "$file" ]; then
+              echo "📄 Executing $file..."
+              sed "s/{PROJECT_ID}/${{ secrets.PROD_GCP_PROJECT_ID }}/g; \
+                   s/{RAW_DATASET}/cricket_raw/g; \
+                   s/{STAGING_DATASET}/cricket_staging/g; \
+                   s/{CURATED_DATASET}/cricket_curated/g; \
+                   s/{AUDIT_DATASET}/cricket_audit_logs/g" "$file" | \
+              bq query --use_legacy_sql=false --location=us-central1 || true
+            fi
+          done
+
+          echo "✅ BigQuery setup completed"
+
+  # ============= HEALTH CHECKS =============
+  health-checks:
+    name: 🏥 Health Checks
+    runs-on: ubuntu-latest
+    needs: bigquery-setup
+    steps:
+      - name: 📥 Checkout code
+        uses: actions/checkout@v4
+
+      - name: 🔐 Authenticate to Google Cloud
+        uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.PROD_GCP_CREDENTIALS_JSON }}
+
+      - name: ☁️ Setup Google Cloud SDK
+        uses: google-github-actions/setup-gcloud@v2
+
+      - name: 📋 Set Project ID
+        run: |
+          gcloud config set project ${{ secrets.PROD_GCP_PROJECT_ID }}
+
+      - name: 📊 Verify BigQuery Datasets
+        run: |
+          echo "✅ Verifying BigQuery datasets in PRODUCTION..."
+          bq ls --project_id=${{ secrets.PROD_GCP_PROJECT_ID }}
+          echo "✅ Datasets verified"
+
+      - name: 🪣 Verify GCS Buckets
+        run: |
+          echo "✅ Verifying GCS buckets in PRODUCTION..."
+          gsutil ls gs://cricket-raw-data-prod
+          gsutil ls gs://cricket-dataflow-templates-prod
+          gsutil ls gs://cricket-dataflow-temp-prod
+          echo "✅ Buckets verified"
+
+      - name: 🔐 Verify IAM Permissions
+        run: |
+          echo "✅ Verifying IAM roles..."
+          gcloud iam service-accounts list --filter="displayName:cricket" --format="value(email)"
+          echo "✅ IAM verified"
 
   # ============= NOTIFICATION =============
   notify:

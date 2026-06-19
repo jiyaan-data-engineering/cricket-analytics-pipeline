@@ -60,7 +60,7 @@ resource "google_service_account" "cloud_composer" {
 # ============================================================================
 
 resource "google_storage_bucket" "raw_data" {
-  name          = "cricket-prod-raw-data"
+  name          = "cricket-raw-data-prod"
   location      = var.gcp_region
   project       = var.gcp_project_id
   force_destroy = false
@@ -69,15 +69,11 @@ resource "google_storage_bucket" "raw_data" {
 
   versioning {
     enabled = false
-  }
-
-  lifecycle {
-    prevent_destroy = true
   }
 }
 
 resource "google_storage_bucket" "templates" {
-  name          = "cricket-prod-dataflow-templates"
+  name          = "cricket-dataflow-templates-prod"
   location      = var.gcp_region
   project       = var.gcp_project_id
   force_destroy = false
@@ -86,15 +82,11 @@ resource "google_storage_bucket" "templates" {
 
   versioning {
     enabled = false
-  }
-
-  lifecycle {
-    prevent_destroy = true
   }
 }
 
 resource "google_storage_bucket" "temp" {
-  name          = "cricket-prod-dataflow-temp"
+  name          = "cricket-dataflow-temp-prod"
   location      = var.gcp_region
   project       = var.gcp_project_id
   force_destroy = false
@@ -103,27 +95,6 @@ resource "google_storage_bucket" "temp" {
 
   versioning {
     enabled = false
-  }
-
-  lifecycle {
-    prevent_destroy = false
-  }
-}
-
-resource "google_storage_bucket" "tf_state" {
-  name          = "cricket-prod-tf-state"
-  location      = var.gcp_region
-  project       = var.gcp_project_id
-  force_destroy = false
-
-  uniform_bucket_level_access = true
-
-  versioning {
-    enabled = true
-  }
-
-  lifecycle {
-    prevent_destroy = true
   }
 }
 

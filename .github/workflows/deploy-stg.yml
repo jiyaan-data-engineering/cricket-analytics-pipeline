@@ -61,7 +61,7 @@ jobs:
         run: |
           echo "Validating Terraform configuration..."
           terraform init -backend=false
-          terraform validate -var-file="environments/stg.tfvars"
+          terraform validate
           echo "✅ Terraform validation passed"
 
   # ============= TERRAFORM PLAN =============

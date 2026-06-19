@@ -12,8 +12,8 @@ terraform {
     }
   }
 
-  backend "gcs" {
-    # Configure with: terraform init -backend-config="bucket=cricket-tf-state-prod" -backend-config="prefix=terraform/state"
+  backend "local" {
+    path = "terraform.tfstate"
   }
 }
 

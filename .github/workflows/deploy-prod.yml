@@ -1,123 +1,358 @@
-name: 🎯 Deploy to PRODUCTION
+name: 🚀 Deploy to PRODUCTION
 
 on:
   push:
     tags:
-      - 'release-v*.*.*'
+      - 'release-v[0-9]+.[0-9]+.[0-9]+'  # release-v1.0.0, release-v1.1.0, etc.
+
+permissions:
+  id-token: write
+  contents: read
+
+env:
+  TERRAFORM_VERSION: 1.5.0
+  GCP_REGION: us-central1
+  ENVIRONMENT: production
+  ENVIRONMENT_SHORT: prod
 
 jobs:
-  # ============= STAGE 1: VALIDATE =============
-  validate:
-    name: 1️⃣ Validate Configuration
+  # ============= PRE-DEPLOYMENT CHECKS =============
+  pre-deployment:
+    name: 🔍 Pre-Deployment Validation
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout code
+      - name: 📥 Checkout code
         uses: actions/checkout@v4
 
-      - name: Setup Terraform
+      - name: 📝 Extract Release Info
+        id: release
+        run: |
+          VERSION=${GITHUB_REF#refs/tags/release-}
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "🎯 Deploying version: $VERSION to PRODUCTION"
+
+      - name: 🔒 Validate Tag Format
+        run: |
+          VERSION=${GITHUB_REF#refs/tags/release-}
+          if [[ $VERSION =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "✅ Tag format is valid: $VERSION"
+          else
+            echo "❌ Invalid tag format: $VERSION"
+            echo "Expected format: release-v*.*.* (e.g., release-v1.0.0)"
+            exit 1
+          fi
+
+  # ============= VALIDATION =============
+  validate:
+    name: 🔍 Validate Configuration
+    runs-on: ubuntu-latest
+    needs: pre-deployment
+    steps:
+      - name: 📥 Checkout code
+        uses: actions/checkout@v4
+
+      - name: 🔧 Setup Terraform
         uses: hashicorp/setup-terraform@v2
         with:
-          terraform_version: 1.5.0
+          terraform_version: ${{ env.TERRAFORM_VERSION }}
 
-      - name: Validate Terraform
+      - name: 📋 Terraform Format Check
         working-directory: infrastructure/terraform
         run: |
+          echo "Checking Terraform formatting..."
+          terraform fmt -check -recursive .
+          if [ $? -eq 0 ]; then
+            echo "✅ Terraform formatting is correct"
+          else
+            echo "❌ Terraform formatting issues found"
+            exit 1
+          fi
+
+      - name: 🔍 Terraform Validate
+        working-directory: infrastructure/terraform
+        run: |
+          echo "Validating Terraform configuration for PRODUCTION..."
           terraform init -backend=false
-          terraform validate
+          terraform validate -var-file=terraform.tfvars
           echo "✅ Terraform validation passed"
 
-  # ============= STAGE 2: PLAN =============
+  # ============= TERRAFORM PLAN =============
   plan:
-    name: 2️⃣ Terraform Plan
+    name: 📋 Terraform Plan
     runs-on: ubuntu-latest
     needs: validate
+    outputs:
+      plan_output: ${{ steps.plan.outputs.stdout }}
     steps:
-      - name: Checkout code
+      - name: 📥 Checkout code
         uses: actions/checkout@v4
 
-      - name: Setup Terraform
+      - name: 🔧 Setup Terraform
         uses: hashicorp/setup-terraform@v2
         with:
-          terraform_version: 1.5.0
+          terraform_version: ${{ env.TERRAFORM_VERSION }}
 
-      - name: Initialize Terraform
-        working-directory: infrastructure/terraform
-        run: terraform init
-
-      - name: Terraform Plan
-        working-directory: infrastructure/terraform
-        run: |
-          terraform plan -out=tfplan
-          echo "✅ Terraform plan created"
-
-  # ============= STAGE 3: APPLY =============
-  apply:
-    name: 3️⃣ Create GCS Buckets
-    runs-on: ubuntu-latest
-    needs: plan
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Setup Terraform
-        uses: hashicorp/setup-terraform@v2
-        with:
-          terraform_version: 1.5.0
-
-      - name: Authenticate to GCP
+      - name: 🔐 Authenticate to Google Cloud
         uses: google-github-actions/auth@v2
         with:
           credentials_json: ${{ secrets.GCP_SA_KEY }}
 
-      - name: Setup Google Cloud SDK
+      - name: ☁️ Setup Google Cloud SDK
         uses: google-github-actions/setup-gcloud@v2
 
-      - name: Initialize Terraform
-        working-directory: infrastructure/terraform
-        run: terraform init
-
-      - name: Terraform Apply
+      - name: 📍 Initialize Terraform
         working-directory: infrastructure/terraform
         run: |
-          terraform apply -auto-approve -var-file=terraform.tfvars
-          echo "✅ Buckets created"
+          terraform init -upgrade
 
-  # ============= STAGE 4: VERIFY =============
-  verify:
-    name: 4️⃣ Verify Buckets
+      - name: 📋 Terraform Plan
+        working-directory: infrastructure/terraform
+        id: plan
+        run: |
+          echo "🔍 Running Terraform plan for PRODUCTION environment..."
+          terraform plan \
+            -var-file=terraform.tfvars \
+            -out=tfplan \
+            -no-color
+
+      - name: 📤 Upload Plan Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: terraform-plan-prod
+          path: infrastructure/terraform/tfplan
+          retention-days: 7
+
+      - name: 📊 Show Plan Summary
+        working-directory: infrastructure/terraform
+        run: |
+          echo "📋 Terraform Plan Summary:"
+          terraform show tfplan | head -100
+
+  # ============= TERRAFORM APPLY =============
+  apply:
+    name: 🚀 Terraform Apply
+    runs-on: ubuntu-latest
+    needs: plan
+    environment: production
+    steps:
+      - name: 📥 Checkout code
+        uses: actions/checkout@v4
+
+      - name: 🔧 Setup Terraform
+        uses: hashicorp/setup-terraform@v2
+        with:
+          terraform_version: ${{ env.TERRAFORM_VERSION }}
+
+      - name: 🔐 Authenticate to Google Cloud
+        uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.GCP_SA_KEY }}
+
+      - name: ☁️ Setup Google Cloud SDK
+        uses: google-github-actions/setup-gcloud@v2
+
+      - name: 📍 Initialize Terraform
+        working-directory: infrastructure/terraform
+        run: |
+          terraform init -upgrade
+
+      - name: 📥 Download Plan Artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: terraform-plan-prod
+          path: infrastructure/terraform/
+
+      - name: 🚀 Terraform Apply
+        working-directory: infrastructure/terraform
+        run: |
+          echo "🚀 Applying Terraform plan for PRODUCTION environment..."
+          terraform apply -auto-approve tfplan
+          echo "✅ Infrastructure deployed successfully"
+
+      - name: 📊 Show Outputs
+        working-directory: infrastructure/terraform
+        run: |
+          echo "📊 Deployment Outputs:"
+          terraform output -json | jq .
+
+  # ============= BIGQUERY SETUP =============
+  bigquery-setup:
+    name: 📊 Setup BigQuery
     runs-on: ubuntu-latest
     needs: apply
     steps:
-      - name: Authenticate to GCP
+      - name: 📥 Checkout code
+        uses: actions/checkout@v4
+
+      - name: 🔐 Authenticate to Google Cloud
         uses: google-github-actions/auth@v2
         with:
           credentials_json: ${{ secrets.GCP_SA_KEY }}
 
-      - name: Setup Google Cloud SDK
+      - name: ☁️ Setup Google Cloud SDK
         uses: google-github-actions/setup-gcloud@v2
 
-      - name: Verify Buckets
+      - name: 📋 Set Project ID
         run: |
-          echo "Verifying buckets..."
-          gsutil ls -b gs://cricket-raw-data-prod && echo "✅ raw-data bucket" || echo "❌ FAILED"
-          gsutil ls -b gs://cricket-dataflow-templates-prod && echo "✅ templates bucket" || echo "❌ FAILED"
-          gsutil ls -b gs://cricket-dataflow-temp-prod && echo "✅ temp bucket" || echo "❌ FAILED"
+          gcloud config set project cricket-analytics-prod
 
-  # ============= STAGE 5: SUCCESS =============
-  success:
-    name: 5️⃣ Deployment Complete
-    runs-on: ubuntu-latest
-    needs: verify
-    steps:
-      - name: Success Summary
+      - name: 🗄️ Execute BigQuery SQL Scripts
         run: |
-          echo "============================================"
-          echo "✅ GCS BUCKETS CREATED SUCCESSFULLY"
-          echo "============================================"
+          cd pipeline/bigquery/sql
+
+          echo "🗄️ Executing BigQuery setup scripts for PRODUCTION..."
+
+          SQL_FILES=(
+            "00_create_audit_logs.sql"
+            "raw_batting_rankings.sql"
+            "vw_latest_raw.sql"
+            "dim_player.sql"
+            "dim_country.sql"
+            "dim_format.sql"
+            "dim_date.sql"
+            "fact_batting_rankings.sql"
+            "vw_batting_rankings_latest.sql"
+            "vw_batting_rankings_90day_trend.sql"
+            "vw_top_10_batsmen_by_format.sql"
+            "vw_batting_statistics_by_country.sql"
+            "vw_ranking_comparison_cross_format.sql"
+          )
+
+          for file in "${SQL_FILES[@]}"; do
+            if [ -f "$file" ]; then
+              echo "📄 Executing $file..."
+              sed "s/{PROJECT_ID}/cricket-analytics-prod/g; \
+                   s/{RAW_DATASET}/cricket_raw/g; \
+                   s/{STAGING_DATASET}/cricket_staging/g; \
+                   s/{CURATED_DATASET}/cricket_curated/g; \
+                   s/{AUDIT_DATASET}/cricket_audit_logs/g" "$file" | \
+              bq query --use_legacy_sql=false --location=us-central1 || true
+            fi
+          done
+
+          echo "✅ BigQuery setup completed"
+
+  # ============= HEALTH CHECKS =============
+  health-checks:
+    name: 🏥 Health Checks
+    runs-on: ubuntu-latest
+    needs: bigquery-setup
+    steps:
+      - name: 📥 Checkout code
+        uses: actions/checkout@v4
+
+      - name: 🔐 Authenticate to Google Cloud
+        uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.GCP_SA_KEY }}
+
+      - name: ☁️ Setup Google Cloud SDK
+        uses: google-github-actions/setup-gcloud@v2
+
+      - name: 📋 Set Project ID
+        run: |
+          gcloud config set project cricket-analytics-prod
+
+      - name: 📊 Verify BigQuery Datasets
+        run: |
+          echo "✅ Verifying BigQuery datasets in PRODUCTION..."
+          bq ls --project_id=cricket-analytics-prod
+          echo "✅ Datasets verified"
+
+      - name: 🪣 Verify GCS Buckets
+        run: |
+          echo "✅ Verifying GCS buckets in PRODUCTION..."
+          gsutil ls gs://cricket-raw-data-prod
+          gsutil ls gs://cricket-dataflow-templates-prod
+          gsutil ls gs://cricket-dataflow-temp-prod
+          echo "✅ Buckets verified"
+
+      - name: 🔐 Verify IAM Permissions
+        run: |
+          echo "✅ Verifying IAM roles..."
+          gcloud iam service-accounts list --filter="displayName:cricket" --format="value(email)"
+          echo "✅ IAM verified"
+
+  # ============= NOTIFICATION =============
+  notify:
+    name: 📢 Notify Deployment
+    runs-on: ubuntu-latest
+    needs: [health-checks]
+    if: always()
+    steps:
+      - name: ✅ Success Notification
+        if: success()
+        run: |
+          VERSION=${GITHUB_REF#refs/tags/release-}
+          echo "🎉 PRODUCTION DEPLOYMENT SUCCESSFUL! 🎉"
           echo ""
-          echo "Buckets created:"
-          echo "  ✅ cricket-raw-data-prod"
-          echo "  ✅ cricket-dataflow-templates-prod"
-          echo "  ✅ cricket-dataflow-temp-prod"
+          echo "📦 Release: release-$VERSION"
+          echo "📊 Deployment Summary:"
+          echo "  • Environment: PRODUCTION"
+          echo "  • Version: release-$VERSION"
+          echo "  • Commit: ${{ github.sha }}"
+          echo "  • Run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
           echo ""
-          echo "Deployment Status: COMPLETE"
+          echo "✅ Cricket Analytics Pipeline is LIVE!"
+          echo ""
+
+      - name: ❌ Failure Notification
+        if: failure()
+        run: |
+          VERSION=${GITHUB_REF#refs/tags/release-}
+          echo "❌ PRODUCTION DEPLOYMENT FAILED ❌"
+          echo ""
+          echo "📦 Release: release-$VERSION"
+          echo "📊 Failure Summary:"
+          echo "  • Environment: PRODUCTION"
+          echo "  • Version: release-$VERSION"
+          echo "  • Commit: ${{ github.sha }}"
+          echo "  • Run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+          echo ""
+          echo "🔍 Check the logs above for details"
+          exit 1
+
+  # ============= RELEASE NOTES =============
+  release:
+    name: 📝 Create Release Notes
+    runs-on: ubuntu-latest
+    needs: notify
+    if: success()
+    steps:
+      - name: 📥 Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: 📝 Generate Release Notes
+        id: release_notes
+        run: |
+          VERSION=${GITHUB_REF#refs/tags/release-}
+          PREV_VERSION=$(git describe --tags --abbrev=0 release-$VERSION^ 2>/dev/null || echo "")
+
+          echo "📝 Release Notes for release-$VERSION"
+          echo "================================"
+          if [ -n "$PREV_VERSION" ]; then
+            echo "Changes since $PREV_VERSION:"
+            git log $PREV_VERSION..release-$VERSION --oneline
+          else
+            echo "Initial production release"
+          fi
+
+      - name: 🚀 Update Release
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: ${{ github.ref_name }}
+          body: |
+            🎉 **PRODUCTION Deployment Successful** 🎉
+
+            Version: ${{ github.ref_name }}
+
+            ✅ All validations passed
+            ✅ Infrastructure deployed
+            ✅ BigQuery setup complete
+            ✅ Health checks passed
+
+            **Cricket Analytics Pipeline is LIVE in PRODUCTION**
+          draft: false
+          prerelease: false

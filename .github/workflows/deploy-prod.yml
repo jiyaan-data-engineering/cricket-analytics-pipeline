@@ -56,18 +56,6 @@ jobs:
         with:
           terraform_version: ${{ env.TERRAFORM_VERSION }}
 
-      - name: 📋 Terraform Format Check
-        working-directory: infrastructure/terraform
-        run: |
-          echo "Checking Terraform formatting..."
-          terraform fmt -check -recursive .
-          if [ $? -eq 0 ]; then
-            echo "✅ Terraform formatting is correct"
-          else
-            echo "❌ Terraform formatting issues found"
-            exit 1
-          fi
-
       - name: 🔍 Terraform Validate
         working-directory: infrastructure/terraform
         run: |

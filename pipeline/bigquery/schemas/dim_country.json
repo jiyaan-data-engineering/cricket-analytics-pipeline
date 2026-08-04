@@ -16,11 +16,5 @@
     "type": "STRING",
     "mode": "NULLABLE",
     "description": "ICC country code (e.g., IND, AUS, PAK, ENG, RSA, WI, NZ, SL, BAN, AFG, UNK)"
-  },
-  {
-    "name": "last_updated",
-    "type": "TIMESTAMP",
-    "mode": "NULLABLE",
-    "description": "Last update timestamp"
   }
 ]
